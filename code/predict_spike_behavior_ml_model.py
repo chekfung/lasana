@@ -98,7 +98,7 @@ table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baselin
 
 # ---------------------
 
-# Linear interpolator (Table-based method)
+# Nearest-Neighbor Interpolator (Table-based method)
 print("Training NN Interpolation")
 table_y_pred, train_time, test_time = interpolate(X_train, X_test, X_val, y_train, y_test, y_val)
 baseline_metrics = calculate_binary_classification_metrics(y_test, table_y_pred)
@@ -110,40 +110,6 @@ print("Training Logistic Regression")
 logistic_y_pred, train_time, test_time = calculate_logistic_regression(X_train, X_test, X_val, y_train, y_test, y_val, std_scaler)
 baseline_metrics = calculate_binary_classification_metrics(y_test, logistic_y_pred)
 table.add_row(["Logistic Regression", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-
-# ----------------------
-
-# Print Linear SVM Stuff
-# print("Training Linear SVM")
-# svm_y_pred, train_time, test_time = train_svm(X_train, X_test, np.ravel(y_train), np.ravel(y_test), std_scaler)
-# baseline_metrics = calculate_binary_classification_metrics(y_test, svm_y_pred)
-# table.add_row(["Linear SVM", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-
-# ----------------------
-
-# Print RBF SVM Stuff
-# print("Training RBF SVM")
-# svm_y_pred, train_time, test_time = train_svm(X_train, X_test, np.ravel(y_train), np.ravel(y_test), std_scaler, model_type='rbf')
-# baseline_metrics = calculate_binary_classification_metrics(y_test, svm_y_pred)
-# table.add_row(["RBF SVM", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-
-# ----------------------
-# XGBoost
-# NOTE: Decision Tree Based Models do not need scaled data :O
-hyperparams = {
-    'learning_rate': 0.03,
-    'max_depth': 4,
-    'n_estimators': 500,
-    'subsample': 0.7,
-    'lambda': 1,
-    'early_stopping_rounds':50,
-    'eval_metric':'logloss'
-}
-
-print("Training XGBoost")
-# xg_y_pred, train_time, test_time = run_xgboost_classify(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams)
-# baseline_metrics = calculate_binary_classification_metrics(y_test, xg_y_pred)
-# table.add_row(["XGBoost", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 # -------------------------
 # CatBoost
@@ -183,29 +149,6 @@ mlp_model_save_name = "mlp_spike_or_not_11_8"
 mlp_y_pred, train_time, test_time = train_mlp_classify(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_save_name))
 baseline_metrics = calculate_binary_classification_metrics(y_test, mlp_y_pred)
 table.add_row(["MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-
-
-#------------------------------------------
-# Pytorch MLP
-# Pytorch MLP Implementation :)
-hyperparameters_mlp = {
-    'hidden_layer_sizes': [10],
-    'learning_rate_init': 0.01,
-    'batch_size': 200,
-    #'loss_fn': nn.BCELoss(),  
-    'activation': nn.ReLU(), 
-    'num_epochs':200,
-    'tol':1e-5,
-    'alpha':1e-4
-}
-
-# Check if CUDA (GPU) is available
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-# mlp_model_save_name_torch = "mlp_spike_or_not_raw_logit_pytorch"
-# mlp_y_pred_torch, train_time, test_time = train_pytorch_mlp_classifier(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, device=device, save_model=SAVE_PYTORCH_MLP_MODEL, model_name=os.path.join(dataset_ml_models, mlp_model_save_name_torch))
-# baseline_metrics = calculate_binary_classification_metrics(y_test, mlp_y_pred_torch)
-# table.add_row(["Pytorch MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 # -----------------
 # Print and write the table to the file

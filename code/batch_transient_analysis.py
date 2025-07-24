@@ -158,13 +158,11 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # Hyperparameters
 RUN_NAME = 'spiking_20000_runs_4_10'#"new_run_20000_4_7_25"#"test_run_no_negative_weights_1_13"#"test_run_negative_weights_1_13_2000_runs"#"20000_training_set_with_weights"#""VARY_0.5_1.5_1000_RUNS"
 MODEL_RUN_NAME = "larger_weight_range"#"explicit_edge_case_increase_spk_smaller_knob_range_3_10_25"#"test_run_no_negative_weights_1_14_low_cap_spectre"#"test_run_no_negative_weights_1_13"#"add_weights_1000_runs_vary_0.5_1.5"
-CSV_NAME = 'test1.csv'#"6_6_test_combined.csv"#"mlcad_final_fix_6_3_weights_included.csv"#"mlcad_final_fix.csv"#"dataset_all_energies_annotated.csv"#"dataset_final.csv"
-#LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Input_Total_Charge", "Input_Total_Time", "Input_Peak_Amplitude", "V_sf", "V_adap", "V_leak", "V_rtr"]
+CSV_NAME = 'test1.csv'
 LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
 NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
 LOAD_IN_MLP_MODELS = True
 
-#LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Input_Total_Charge", "Input_Total_Time", "Circuit_Fan_In", "Circuit_Fan_Out", "V_sf", "V_adap", "V_leak", "V_rtr"]
 SHOW_FIGS = True
 SAVE_FIGS = False   # For just the MSE, MAPE, and MAE plots
 SAVE_FIGS_2 = False  # For anything that is not MSEs and other stuff

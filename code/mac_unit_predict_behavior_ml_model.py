@@ -12,7 +12,17 @@ today = date.today().isoformat()
 
 # Helper files with all ML model helpers :)
 from predict_ml_model_helpers import *
-from config import *            # TODO: Fix this :)
+
+# Dynamically load configs :)
+import argparse
+from dynamic_config_load import inject_config
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", required=True, help="Name of the config file (without .py)")
+args = parser.parse_args()
+
+inject_config(args.config, globals())
+
+
 figure_counter = 0
 
 # TODO: Fix seed so that always the same :) (Not sure if we actually need to do this but yeah)
@@ -133,7 +143,7 @@ print("Trained Baseline Metric")
 
 # ---------------------
 
-# Linear interpolator (Table-based method)
+# Nearest-Neighbor Interpolator (Table-based method)
 table_y_pred, train_time, test_time = interpolate(X_train, X_test, X_val, y_train, y_test, y_val)
 baseline_metrics = calculate_metrics(y_test, table_y_pred)
 table.add_row(["NN Interpolation", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
@@ -159,24 +169,9 @@ hyperparams = {
     'lambda': 1
 }
 
-# xg_y_pred, train_time, test_time = run_xgboost_regression(X_train, X_test, y_train, y_test, hyperparams)
-# baseline_metrics = calculate_metrics(y_test, xg_y_pred)
-# table.add_row(["XGBoost", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-# print("Trained XGBoost")
 
 # -------------------------
 # CatBoost
-# NOTE: Decision Tree Based Models do not need scaled data :O
-# DAC INPUTS
-# catboost_params = {
-#     'iterations': 4000,
-#     'learning_rate': 0.05,
-#     'depth': 8,
-#     'l2_leaf_reg': 3,
-#     'subsample': 0.8,
-#     'verbose': True
-# }
-
 catboost_params = {
     'iterations': 500,
     'learning_rate': 0.1,
@@ -208,15 +203,6 @@ print("Trained Catboost")
 # ----------------------------
 
 # Assuming X_train_scaled, X_test_scaled, y_train, y_test are your standardized train-test split data
-# DAC INPUT
-# hyperparameters_mlp = {
-#     'hidden_layer_sizes': (100, 50),
-#     'activation': 'relu',
-#     'solver': 'adam',
-#     'max_iter': 200,
-#     'alpha': 0.0001,
-#     'learning_rate_init': 0.01
-# }
 
 hyperparameters_mlp = {
     'hidden_layer_sizes': (100, 50),
@@ -256,8 +242,6 @@ plt.gca().tick_params(width=2.5, length=9, which='major',pad=10)  # Set linewidt
 plt.gca().tick_params(width=2, length=6, which='minor')  # Set linewidth and length for minor ticks
 plt.xticks(fontsize=22)
 plt.yticks(fontsize=22)
-# FIXME: Get rid of this before submission
-#plt.title("CatBoost")
 
 
 for spine in plt.gca().spines.values():
@@ -266,35 +250,6 @@ plt.tight_layout()
 if SAVE_FIGS:
     plt.savefig('figure_src/mac_catboost_behavior_model_correlation_plot_'+today+'.svg', format='svg')
     plt.savefig('figure_src/mac_catboost_behavior_model_correlation_plot_'+today+'.pdf', format='pdf')
-
-
-
-# plt.figure(figure_counter)
-# figure_counter+=1    
-# plt.scatter(mlp_y_pred, y_test, marker='x', linewidth=2)
-# plt.plot([-2.75,2.75], [-2.75,2.75], '--', color='black', linewidth=3.5)
-# plt.xlim(-3,3)
-# plt.ylim(-3,3)
-# plt.xlabel("Predicted Output (V)", fontsize=22)
-# plt.ylabel("SPICE Output (V)", fontsize=22)
-# plt.gca().set_aspect('equal', adjustable='box')
-# plt.gca().xaxis.set_major_locator(MultipleLocator(1))
-# plt.gca().xaxis.set_minor_locator(MultipleLocator(0.5))
-# plt.gca().yaxis.set_major_locator(MultipleLocator(1))
-# plt.gca().yaxis.set_minor_locator(MultipleLocator(0.5))
-# plt.gca().tick_params(width=2.5, length=9, which='major',pad=10)  # Set linewidth and length for major ticks
-# plt.gca().tick_params(width=2, length=6, which='minor')  # Set linewidth and length for minor ticks
-# plt.xticks(fontsize=22)
-# plt.yticks(fontsize=22)
-
-
-# for spine in plt.gca().spines.values():
-#     spine.set_linewidth(2.5)
-# plt.tight_layout()
-# if SAVE_FIGS:
-#     plt.savefig('figure_src/mac_mlp_behavior_model_correlation_plot_'+today+'.svg', format='svg')
-#     plt.savefig('figure_src/mac_mlp_behavior_model_correlation_plot_'+today+'.pdf', format='pdf')
-
 
 # -------------------------------
 # Print and write the table to the file

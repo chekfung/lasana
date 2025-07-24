@@ -12,7 +12,15 @@ today = date.today().isoformat()
 
 # Helper files with all ML model helpers :)
 from predict_ml_model_helpers import *
-from config import *
+
+# Dynamically load configs :)
+import argparse
+from dynamic_config_load import inject_config
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", required=True, help="Name of the config file (without .py)")
+args = parser.parse_args()
+
+inject_config(args.config, globals())
 
 # TODO: Fix seed so that always the same :) (Not sure if we actually need to do this but yeah)
 
@@ -39,10 +47,7 @@ spike_data_df['Energy'] = spike_data_df['Energy'] * 10**12
 std_scaler = produce_or_load_common_standard_scalar(spike_data_df, LIST_OF_COLUMNS_X_MAC, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT, random_state=42)
 
 # Label if there is input spike or not
-print(spike_data_df)
-# FIXME: With what changed, I believe that this is just going to be every single thing :) ; We can look later
 spike_data_df = spike_data_df[spike_data_df['Event_Type'].isin(['leak'])]
-print(spike_data_df)
 
 # Generate input total charge histogram.
 plt.figure(figure_counter)
@@ -95,47 +100,20 @@ baseline_metrics = calculate_metrics(y_test, baseline_vec)
 table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 # ---------------------
-
-# Linear interpolator (Table-based method)
+# Nearest-Neighbor Interpolator (Table-based method)
 table_y_pred, train_time, test_time = interpolate(X_train, X_test, X_val, y_train, y_test, y_val)
 baseline_metrics = calculate_metrics(y_test, table_y_pred)
 table.add_row(["NN Interpolation", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 
-# ----------------------
-
+# ---------------------
 # Print Linear Regression Stuff
 ols_y_pred, train_time, test_time = train_linear_regression(X_train, X_test, X_val, y_train, y_test, y_val, std_scaler)
 baseline_metrics = calculate_metrics(y_test, ols_y_pred)
 table.add_row(["OLS", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-# ----------------------
-# XGBoost
-# NOTE: Decision Tree Based Models do not need scaled data :O
-hyperparams = {
-    'learning_rate': 0.03,
-    'max_depth': 6,
-    'n_estimators': 500,
-    'subsample': 0.7,
-    'lambda': 1
-}
-
-# xg_y_pred, train_time, test_time = run_xgboost_regression(X_train, X_test, y_train, y_test, hyperparams)
-# baseline_metrics = calculate_metrics(y_test, xg_y_pred)
-# table.add_row(["XGBoost", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 # -------------------------
 # CatBoost
-# NOTE: Decision Tree Based Models do not need scaled data :O
-# DAC INPUT
-# catboost_params = {
-#     'iterations': 500,
-#     'learning_rate': 0.1,
-#     'depth': 10,
-#     'l2_leaf_reg': 5,
-#     'subsample': 0.5,
-#     'verbose': False
-# }
-
 catboost_params = {
     'iterations': 500,
     'learning_rate': 0.1,
@@ -153,16 +131,7 @@ table.add_row(["CatBoost",  f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_me
 print("Finished CatBoost")
 
 # ----------------------------
-
-# Assuming X_train_scaled, X_test_scaled, y_train, y_test are your standardized train-test split data
-# hyperparameters_mlp = {
-#     'hidden_layer_sizes': (50, 100),
-#     'activation': 'relu',
-#     'solver': 'adam',
-#     'alpha': 0.0001,
-#     'learning_rate_init': 0.01
-# }
-
+# MLP
 hyperparameters_mlp = {
     'hidden_layer_sizes': (100, 50),
     'activation': 'relu',
@@ -173,7 +142,6 @@ hyperparameters_mlp = {
     'early_stopping':True,
     'validation_fraction': VALIDATION_SPLIT
 }
-
 
 mlp_model_name = "mlp_static_energy_11_8"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_name))
@@ -201,47 +169,12 @@ plt.ylim(0,0.4)
 plt.xticks(fontsize=22)
 plt.yticks(fontsize=22)
 
-# FIXME: Get rid of this before submission
-#plt.title("CatBoost")
-
 for spine in plt.gca().spines.values():
     spine.set_linewidth(2.5)
 plt.tight_layout()
 if SAVE_FIGS:
     plt.savefig('figure_src/mac_catboost_static_energy_model_correlation_plot_'+today+'.svg', format='svg')
     plt.savefig('figure_src/mac_catboost_static_energy_model_correlation_plot_'+today+'.pdf', format='pdf')
-
-
-
-# plt.figure(figure_counter)
-# plt.gca().set_aspect('equal', adjustable='box')
-# figure_counter+=1    
-# plt.scatter(mlp_y_pred, y_test, marker='x', linewidth=2)
-# plt.xlabel("Predicted Energy (pJ)",fontsize=22,labelpad=10)
-# plt.ylabel("SPICE Energy (pJ)",fontsize=22,labelpad=10)
-# plt.gca().xaxis.set_major_locator(MultipleLocator(0.5))
-# plt.gca().xaxis.set_minor_locator(MultipleLocator(.25))
-# plt.gca().yaxis.set_major_locator(MultipleLocator(0.5))
-# plt.gca().yaxis.set_minor_locator(MultipleLocator(.25))
-# plt.gca().tick_params(width=2.5, length=9, which='major',pad=10)  # Set linewidth and length for major ticks
-# plt.gca().tick_params(width=2, length=6, which='minor')  # Set linewidth and length for minor ticks
-# plt.plot([0.05, 2.45], [.05, 2.45], '--', color='black', linewidth=3.5)
-# plt.xlim(0,2.5)
-# plt.ylim(0,2.5)
-# plt.xticks(fontsize=22)
-# plt.yticks(fontsize=22)
-
-# FIXME: Get rid of this before submission
-#plt.title("MLP")
-
-for spine in plt.gca().spines.values():
-    spine.set_linewidth(2.5)
-plt.tight_layout()
-if SAVE_FIGS:
-    plt.savefig('figure_src/mac_mlp_static_energy_model_correlation_plot_'+today+'.svg', format='svg')
-    plt.savefig('figure_src/mac_mlp_static_energy_model_correlation_plot_'+today+'.pdf', format='pdf')
-
-
 
 # -----------------
 # Print and write the table to the file

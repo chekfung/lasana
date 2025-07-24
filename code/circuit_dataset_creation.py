@@ -12,7 +12,16 @@ import gc
 # Imports from Helper Files
 from SpikeData import *
 from tools_helper import *
-from config import *            # TODO: Fix this part :)
+
+# Dynamically load config :)
+import argparse
+from dynamic_config_load import inject_config
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", required=True, help="Name of the config file (without .py)")
+args = parser.parse_args()
+
+inject_config(args.config, globals())
+
 
 '''
 LASANA Dataset Creation (File 2 of creation of the dataset)
@@ -35,7 +44,7 @@ def analyze_run(i):
 # -------------------------------------
 # Read in Hyperparameters from the config files and from the previous testbench_generation runs
 
-run_directory = os.path.join('data', RUN_NAME)
+run_directory = os.path.join('../data', RUN_NAME)
 HYPERPARAMETERS_CSV_FILE = os.path.join(run_directory, "randomized_output_log.csv")
 DATASET_CREATION_FILENAME = os.path.join(run_directory, DF_FILENAME)
 

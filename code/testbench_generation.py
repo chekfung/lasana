@@ -8,7 +8,15 @@ import shutil
 # JH created helper files 
 from create_spikes import *
 from tools_helper import *
-from config import *        # TODO: Fix this
+
+# Dynamically load configs :)
+import argparse
+from dynamic_config_load import inject_config
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", required=True, help="Name of the config file (without .py)")
+args = parser.parse_args()
+
+inject_config(args.config, globals())
 
 # ======================
 '''
@@ -26,7 +34,7 @@ assert(is_simulator_real(sim_str))
 pwl_file_template = RUN_NAME + "_" + "pwl_file_{}_{}.txt"       # First one referes to run number, second is input net connection :)
 
 # File IO to create directory structure for run
-run_directory = os.path.join('data', RUN_NAME)
+run_directory = os.path.join('../data', RUN_NAME)
 libraries_directory = os.path.join(run_directory, 'libraries')
 pwl_file_main_directory = os.path.join(run_directory, "pwl_files")
 spice_run_directory = os.path.join(run_directory, 'spice_runs')
@@ -137,7 +145,6 @@ while (current_runs < NUMBER_OF_RUNS):
                 continue
 
             # Applies random weight to each of the spikes in the spike map
-            # Change same sign here to enforce same sign for certain percentage :)
             low_weight = WEIGHT_LOW
             high_weight = WEIGHT_HIGH
 

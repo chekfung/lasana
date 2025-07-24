@@ -1,25 +1,27 @@
 import subprocess
 import sys
 
+# TODO: Update this to run everything! :)
+
 # List of Python file names you want to execute
 python_files = [
-    #"generate_dataset.py",
-    #"analyze_dataset_v3.py",
+    "testbench_generation.py",
+    "circuit_dataset_creation.py",
     "predict_dynamic_energy_ml_model.py",
     "predict_latency_ml_model.py",
-    "predict_neuron_state_ml_model.py",
+    "predict_state_ml_model.py",
     "predict_spike_behavior_ml_model.py",
     "predict_static_energy_ml_model.py"
-]   # FIXME: Change these file names to reflect the new names :)
+]  
 
 python_files_mac_unit = [
-    #"generate_dataset.py",
-    #"analyze_dataset_v3.py",
+    "testbench_generation.py",
+    "circuit_dataset_creation.py",
     "mac_unit_predict_dynamic_energy_ml_model.py",
     "mac_unit_predict_latency_ml_model.py",
     "mac_unit_predict_behavior_ml_model.py",
     "mac_unit_predict_static_energy_ml_model.py"
-]   # FIXME: Change these file names to reflect the new names :)
+]  
 
 
 def run_python_files(files):
@@ -28,7 +30,7 @@ def run_python_files(files):
             print('\n\n---------------------------------------')
             print(f"Running {file}...")
             # Run the python file as a subprocess and print the output to stdout in real-time
-            process = subprocess.Popen(['python', file], stdout=sys.stdout, stderr=sys.stderr, text=True)
+            process = subprocess.Popen(['python', file, '--config', CONFIG], stdout=sys.stdout, stderr=sys.stderr, text=True)
 
             # Wait for the process to complete
             process.wait()
@@ -42,7 +44,8 @@ def run_python_files(files):
             print(f"Error occurred while running {file}: {e}")
 
 if __name__ == "__main__":
-    RUN_MAC_UNIT = True
+    RUN_MAC_UNIT = False
+    CONFIG = 'config_spiking_neuron'
 
     if RUN_MAC_UNIT:
         print(f"Running the following files: [{python_files_mac_unit}]")

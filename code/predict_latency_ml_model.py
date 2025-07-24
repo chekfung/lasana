@@ -12,7 +12,15 @@ today = date.today().isoformat()
 
 # Helper files with all ML model helpers :)
 from predict_ml_model_helpers import *
-from config import *
+
+# Dynamically load configs :)
+import argparse
+from dynamic_config_load import inject_config
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", required=True, help="Name of the config file (without .py)")
+args = parser.parse_args()
+
+inject_config(args.config, globals())
 
 # TODO: Fix seed so that always the same :) (Not sure if we actually need to do this but yeah)
 
@@ -22,7 +30,7 @@ figure_counter = 0
 # --------- BEGIN Preprocessing ---------
 dataset_ml_models = os.path.join('logs', RUN_NAME, "ml_models")
 # Create ML Library
-if SAVE_CATBOOST_MODEL or SAVE_MLP_MODEL or SAVE_PYTORCH_MLP_MODEL:
+if SAVE_CATBOOST_MODEL or SAVE_MLP_MODEL:
     
     if not os.path.exists(dataset_ml_models):
         os.makedirs(dataset_ml_models)
@@ -93,7 +101,7 @@ table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baselin
 
 # ---------------------
 
-# Linear interpolator (Table-based method)
+# Nearest-Neighbor Interpolator (Table-based method)
 table_y_pred, train_time, test_time = interpolate(X_train, X_test, X_val, y_train, y_test, y_val)
 baseline_metrics = calculate_metrics(y_test, table_y_pred)
 
