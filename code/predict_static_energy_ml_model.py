@@ -29,7 +29,7 @@ inject_config(args.config, globals())
 figure_counter = 0
 
 # --------- BEGIN Preprocessing ---------
-dataset_ml_models = os.path.join('logs', RUN_NAME, "ml_models")
+dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
 # Create ML Library
 if SAVE_CATBOOST_MODEL or SAVE_MLP_MODEL:
     
@@ -40,7 +40,7 @@ run_metrics_filename = 'all_energy_model_analysis_4_7' + today + '.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
-dataset_csv_filepath = os.path.join('logs', RUN_NAME, DF_FILENAME)
+dataset_csv_filepath = os.path.join('../data', RUN_NAME, DF_FILENAME)
 
 spike_data_df = pd.read_csv(dataset_csv_filepath)
 spike_data_df['Latency'] = spike_data_df['Latency'] * 10**9
@@ -172,8 +172,7 @@ for spine in plt.gca().spines.values():
     spine.set_linewidth(2.5)
 plt.tight_layout()
 if SAVE_FIGS:
-    plt.savefig('figure_src/mlp_static_energy_model_correlation_plot_'+today+'.svg', format='svg')
-    plt.savefig('figure_src/mlp_static_energy_model_correlation_plot_'+today+'.pdf', format='pdf')
+    plt.savefig('../results/mlp_static_energy_model_correlation_plot_'+today+'.pdf', format='pdf')
 
 # -----------------
 # Print and write the table to the file

@@ -7,7 +7,7 @@ TOTAL_TIME_NS = 500                                         # Nanoseconds of run
 SIM_MIN_STEP_SIZE_NS = 0.05                                 # Minimum step size in nanoseconds of the simulation 
 NUM_INPUT_POINTS = TOTAL_TIME_NS*10                         # Determines fidelity of input that is used for generation of .PWL files (as well as how big they are)
 DIGITAL_INPUT_ENFORCEMENT = True                            # Enforce that inputs can only occur at digital timesteps (If False, deprecated)
-DIGITAL_FREQUENCY = 0.2 * 10**9                             # Digital Backend Frequency 
+DIGITAL_FREQUENCY = 0.25 * 10**9                            # Digital Backend Frequency 
 SPIKING_INPUT = False                                       # Whether the input is a spiking signal or a more traditional steady state signal
 INPUT_SEPARATE_VDD = False                                  # Input voltage / current sources are connected to their own VDD rail (makes it easier to decompose energies later on))
 SIMULATOR = 'hspice'                                        # Simulator: Current Synopsys HSPICE and Cadence Spectre are supported. LTSpice is deprecated.
@@ -21,15 +21,14 @@ LOAD_CAPACITANCE = 500 * 10**(-15)                          # Farads    ;
 # I/O for Logging and Run Creation
 INPUT_NET_NAME = []                                               # Name of current input (s) (Requires I in front)
 INPUT_NET = []                                                    # Name of interconnected net (s)
-INPUT_CURRENT_SRC = False
 
 for i in range(NUMBER_OF_INPUTS):
     INPUT_NET_NAME.append(f"v{i}")
     INPUT_NET.append(f"in{i}")
 
-MODEL_FILEPATH = 'IMAC_Sim/analog_MAC_32_model_1_diff_30.sp'
-OTHER_NECESSARY_FILES_IN_SPICE_RUN_DIRECTORY = ['IMAC_Sim/models', "IMAC_Sim/param.inc"]
-LIBRARY_FILES = ['IMAC_Sim/libraries/14nfet.pm', 'IMAC_Sim/libraries/14pfet.pm']
+MODEL_FILEPATH = '../data/pcm_crossbar_diff30_spice_files/analog_MAC_32_model_1_diff30.sp'
+OTHER_NECESSARY_FILES_IN_SPICE_RUN_DIRECTORY = ['../data/pcm_crossbar_diff30_spice_files/models', "../data/pcm_crossbar_diff30_spice_files/param.inc"]
+LIBRARY_FILES = ['../data/pcm_crossbar_diff30_spice_files/libraries/14nfet.pm', '../data/pcm_crossbar_diff30_spice_files/libraries/14pfet.pm']
 
 # For example, Cout, spk -> Cout spk VSS xF     (Cout is the name, spk is the pos connection, VSS is the neg connection, and xF is the capacitance)
 OUTPUT_CAPACITANCE_NAME = 'Cout'               # Capacitance Name (Requires C in front) 
@@ -60,12 +59,12 @@ KNOB_PARAMS.append(("bias_1", r_low, r_high, 'b'))
 WEIGHT_NET_NAMES_TO_CHANGE["bias_1"] = ("Rbpos1", "Rbneg1")
 
 # ---
-# Spiking Neuron Input Parameters
-INPUT_CURRENT_SRC = True
+# Input Parameters
+INPUT_CURRENT_SRC = False
 
 NUMBER_OF_WEIGHTS = 32                                           # In the spiking input case, the weight is tied directly to a spike. 
-WEIGHT_LOW = -1                                                 # If custom spike input, relative to input weight ; Otherwise, 
-WEIGHT_HIGH = 1                                                 # If custom spiek input, relative to input weight; Otherwise, 
+# WEIGHT_LOW = -1                                                 # If custom spike input, relative to input weight ; Otherwise, 
+# WEIGHT_HIGH = 1                                                 # If custom spiek input, relative to input weight; Otherwise, 
 
 SAME_SIGN_WEIGHTS_FRACTION = 0      # Not used
 BINARY_INPUT_FRACTION = 0.1
@@ -110,7 +109,7 @@ VSS_CURRENT = 'i(vss)'
 
 # ----------------------------- BEGIN Model Training Hyperparameters ------------------------------ #
 PLOT_MATPLOTLIB_FIGS = False
-SAVE_FIGS = False
+SAVE_FIGS = True
 SAVE_CATBOOST_MODEL = True
 SAVE_CATBOOST_CPP = False
 SAVE_MLP_MODEL = True

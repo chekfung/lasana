@@ -9,7 +9,6 @@ import time
 from prettytable import PrettyTable
 from datetime import date    
 today = date.today().isoformat()
-import statsmodels.api as sm
 
 # Helper files with all ML model helpers :)
 from predict_ml_model_helpers import *
@@ -31,7 +30,7 @@ figure_counter = 0
 # --------- BEGIN Preprocessing ---------
 
 # Create ML Library
-dataset_ml_models = os.path.join('logs', RUN_NAME, "ml_models")
+dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
 
 if SAVE_CATBOOST_MODEL or SAVE_MLP_MODEL:
     if not os.path.exists(dataset_ml_models):
@@ -41,12 +40,10 @@ run_metrics_filename = 'latency_model_analysis_' + today + '.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
-dataset_csv_filepath = os.path.join('logs', RUN_NAME, DF_FILENAME)
+dataset_csv_filepath = os.path.join('../data', RUN_NAME, DF_FILENAME)
 spike_data_df = pd.read_csv(dataset_csv_filepath)
 spike_data_df['Latency'] = spike_data_df['Latency'] * 10**9     # Get into ns
 spike_data_df['Energy'] = spike_data_df['Energy'] * 10**12      # Get into pJ
-#spike_data_df = spike_data_df[(spike_data_df['Output_Value'] >= -1) & (spike_data_df['Output_Value'] <= 1)]    # For the DAC2025 rebuttal for the 32x10 guy
-
 # Get the standard scaler
 std_scaler = produce_or_load_common_standard_scalar(spike_data_df, LIST_OF_COLUMNS_X_MAC, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT,random_state=42)
 
@@ -54,39 +51,8 @@ std_scaler = produce_or_load_common_standard_scalar(spike_data_df, LIST_OF_COLUM
 spike_data_df = spike_data_df[spike_data_df['Event_Type'] == 'in-out']
 spike_data_df = spike_data_df[spike_data_df["Latency"] != 0]
 
-counts, bin_edges = np.histogram(spike_data_df["Latency"], bins=100, density=True)
-#cdf = np.cumsum(counts * np.diff(bin_edges))
-
-plt.figure(figure_counter)
-figure_counter+=1
-plt.hist(spike_data_df["Latency"], bins=100)
-plt.title("Latency Histogram Distribution")
-
-if PLOT_MATPLOTLIB_FIGS:
-    plt.show()
-
-plt.figure(figure_counter)
-figure_counter+=1
-plt.scatter(spike_data_df['Output_Value'] - spike_data_df['Last_Output_Value'], spike_data_df['Latency'])
-spike_data_df['Voltage_Swing'] = spike_data_df['Output_Value'] - spike_data_df['Last_Output_Value']
-
-print(spike_data_df[spike_data_df['Latency'] < 0.25])
-
-
-
-# plt.figure(figure_counter)
-# figure_counter+=1
-# plt.plot(bin_edges[1:], cdf, marker="o", color="orange", label="CDF")
-# plt.xlabel("Value")
-# plt.ylabel("Probability")
-# plt.legend()
-# plt.title("Histogram and CDF")
-# plt.show()
-
-
 # Runwise train test split :)
 train_df, test_df, val_df = runwise_train_test_split(spike_data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
-print(spike_data_df.columns)
 X_train = train_df[LIST_OF_COLUMNS_X_MAC]
 y_train = train_df[["Latency"]]
 X_test = test_df[LIST_OF_COLUMNS_X_MAC]
@@ -211,8 +177,7 @@ plt.tight_layout()
 #plt.title("CatBoost")
 
 if SAVE_FIGS:
-    plt.savefig('figure_src/mac_catboost_latency_model_correlation_plot_'+today+'.svg', format='svg')
-    plt.savefig('figure_src/mac_catboost_latency_model_correlation_plot_'+today+'.pdf', format='pdf')
+    plt.savefig('../results/mac_catboost_latency_model_correlation_plot_'+today+'.pdf', format='pdf')
 
 # -----------------
 # Print and write the table to the file

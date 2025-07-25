@@ -7,7 +7,6 @@ import joblib
 
 # Regressors
 from scipy.interpolate import NearestNDInterpolator
-from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
@@ -15,7 +14,6 @@ from sklearn.neural_network import MLPRegressor
 
 # Classifiers
 from sklearn.linear_model import LinearRegression
-from xgboost import XGBClassifier
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 from catboost import CatBoostClassifier
@@ -208,26 +206,6 @@ def train_linear_regression(X_train, X_test, X_val, y_train, y_test, y_val, std_
 
     return y_pred, train_time, inference_time
 
-
-def run_xgboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams):
-    # Define the model
-    model = XGBRegressor(**hyperparams)
-
-    # Train the model
-    start_time = time.time()
-    model.fit(X_train, y_train, eval_set=[(X_val, y_val)],verbose=False)       # Early Stopping based on loss convergence :)
-    #model.fit(X_train, y_train)
-    end_time = time.time()
-    train_time = end_time - start_time
-
-    # Make predictions
-    start_time = time.time()
-    y_pred = model.predict(X_test)
-    end_time = time.time()
-    inference_time = end_time - start_time
-  
-    return y_pred, train_time, inference_time
-
 def run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams, save_model=False, model_name="", cpp_model=False, early_stopping=True):
     model = CatBoostRegressor(**hyperparams)
 
@@ -352,25 +330,6 @@ def train_svm(X_train, X_test, y_train, y_test, std_scaler, model_type='linear')
     inference_time = end_time - start_time
 
     #print("Test MSE:", mse)
-    return y_pred, train_time, inference_time
-
-
-def run_xgboost_classify(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams):
-    # Define the model
-    model = XGBClassifier(**hyperparams)
-
-    # Train the model
-    start_time = time.time()
-    model.fit(X_train, y_train, eval_set=[(X_test, y_test)], verbose=False)
-    end_time = time.time()
-    train_time = end_time - start_time
-
-    # Make predictions
-    start_time = time.time()
-    y_pred = model.predict(X_test)
-    end_time = time.time()
-    inference_time = end_time - start_time
-  
     return y_pred, train_time, inference_time
 
 def run_catboost_classify(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams, save_model=False, model_name="", cpp_model=False):

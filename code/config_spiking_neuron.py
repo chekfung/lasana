@@ -21,9 +21,9 @@ INPUT_NET = ['spikes']                                      # Name of interconne
 LOAD_CAPACITANCE = 500 * 10**(-15)                          # Farads    ;
 
 
-MODEL_FILEPATH = '../spiking_neuron_models/spice/analog_lif_neuron_2_6_2025.sp'         # Top SPICE file that JUST CONTAINS the subcircuit of the analog circuit that will be run.
-OTHER_NECESSARY_FILES_IN_SPICE_RUN_DIRECTORY = []                                       # Additional SPICE files that might be necessary to be linked with the model
-LIBRARY_FILES = ['../spiking_neuron_models/libraries/45nm_LP.pm']                       # Library files that might need to be linked such as technology files, etc.
+MODEL_FILEPATH = '../data/spiking_neuron_spice_files/analog_lif_neuron.sp'         # Top SPICE file that JUST CONTAINS the subcircuit of the analog circuit that will be run.
+OTHER_NECESSARY_FILES_IN_SPICE_RUN_DIRECTORY = []                                                 # Additional SPICE files that might be necessary to be linked with the model
+LIBRARY_FILES = ['../data/spiking_neuron_spice_files/libraries/45nm_LP.pm']                 # Library files that might need to be linked such as technology files, etc.
 
 # For example, Cout, spk -> Cout spk VSS xF     (Cout is the name, spk is the pos connection, VSS is the neg connection, and xF is the capacitance)
 OUTPUT_CAPACITANCE_NAME = 'Cout'                                                        # Capacitance Name (Requires C in front) 
@@ -55,7 +55,7 @@ if SPIKING_INPUT:
     Rather than try and emulate what a spike might look like, we take in a circuit file that is partially completed, run it, and
     grab the spike from there. This is then used for input generation.
     '''
-    DELAY_RATIO = 0.2                                           # Forces input to have approximately 20% leak events
+    DELAY_RATIO = 0.3                                           # Forces input to have approximately 20% leak events
     SAME_SIGN_WEIGHTS_FRACTION = 0.1                            # Fraction of runs that will have all the same signed weights / inputs (either negative or positive with 50/50 chance)
     REFRACTORY_PERIOD = 5 * 10**(-10)                           # seconds   ; Time before another spike can occur on the same neuron 
     RUN_TIMEOUT = 10                                            # seconds   ; If spike mapping solution not found in x seconds, throw error.
@@ -66,7 +66,7 @@ if SPIKING_INPUT:
 
     PLOT_SPIKE_BOUNDS = False                                   # Plot spike footprint after running to see whether or not we correctly capture the spike
     OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint :)
-    SPICE_FOOTPRINT_FILE = '../spiking_neuron_models/spice/analog_lif_neuron_playground_spectre_larger_width_reset.sp'
+    SPICE_FOOTPRINT_FILE = '../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp'
     SPIKE_START = 306
     SPIKE_END = 361
 
@@ -111,7 +111,7 @@ VSS_CURRENT = None
 
 # ----------------------------- BEGIN Model Training Hyperparameters ------------------------------ #
 PLOT_MATPLOTLIB_FIGS = False
-SAVE_FIGS = False
+SAVE_FIGS = True
 SAVE_CATBOOST_MODEL = True
 SAVE_CATBOOST_CPP = False
 SAVE_MLP_MODEL = True
