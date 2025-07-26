@@ -1,0 +1,188 @@
+
+Spectre (R) Circuit Simulator
+Version 21.1.0.854.isr22 64bit -- 15 Sep 2023
+Copyright (C) 1989-2023 Cadence Design Systems, Inc. All rights reserved worldwide. Cadence and Spectre are registered trademarks of Cadence Design Systems, Inc. All others are the property of their respective holders.
+
+Includes RSA BSAFE(R) Cryptographic or Security Protocol Software from RSA Security, Inc.
+
+User: jh76794   Host: snarl   HostID: 53804EAF   PID: 794202
+Memory  available: 24.4788 GB  physical: 33.3233 GB
+Linux   : Ubuntu release 20.04.6 LTS (Focal Fossa)
+CPU Type: 13th Gen Intel(R) Core(TM) i7-13700
+        Socket: Processors [Frequency] (Hyperthreaded Processor)
+        0:       0 [2100.0] (  1 ),  1 [2100.0] (),  2 [2100.0] (  3 )
+                 3 [2100.0] (),  4 [2100.0] (  5 ),  5 [2100.0] (),  6 [2100.0] (  7 )
+                 7 [2100.0] (),  8 [5134.2] (  9 ),  9 [2100.0] (), 10 [2100.0] ( 11 )
+                11 [2100.0] (), 12 [2100.0] ( 13 ), 13 [2100.0] (), 14 [2855.9] ( 15 )
+                15 [2100.0] (), 16 [2100.0] (), 17 [2100.0] (), 18 [2100.0] (), 19 [2100.0] ()
+                20 [2100.0] (), 21 [2100.0] (), 22 [2100.0] (), 23 [2100.0] ()
+        
+System load averages (1min, 5min, 15min) : 14.6 %, 12.9 %, 5.4 %
+Hyperthreading is enabled
+HPC is enabled
+
+
+Simulating `../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp' on snarl at 12:30:28 PM, Sat Jul 26, 2025 (process id: 794202).
+Current working directory: /home/local/snarl/jh76794/documents/lasana/code
+Command line:
+    /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/bin/spectre  \
+        -64 +aps  \
+        ../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp  \
+        -format psfascii -r  \
+        ../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.raw  \
+        +multithread =l  \
+        ../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run_sim_log.txt
+
+Licensing Information:
+[12:30:29.002442] Configured Lic search path (21.01-s002): /usr/local/packages/cadence_2023/license.dat:/usr/local/packages/synopsys_2022/key
+
+Licensing Information:
+[12:30:29.042802] Periodic Lic check successful
+
+Loading /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/cmi/lib/64bit/5.0/libinfineon_sh.so ...
+Loading /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/cmi/lib/64bit/5.0/libphilips_o_sh.so ...
+Loading /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/cmi/lib/64bit/5.0/libphilips_sh.so ...
+Loading /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/cmi/lib/64bit/5.0/libsparam_sh.so ...
+Loading /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/cmi/lib/64bit/5.0/libstmodels_sh.so ...
+Reading file:  /home/local/snarl/jh76794/documents/lasana/data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp
+Reading file:  /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/spectre/etc/configs/spectre.cfg
+Reading file:  /home/local/snarl/jh76794/documents/lasana/data/spiking_neuron_spice_files/libraries/45nm_LP.pm
+Time for NDB Parsing: CPU = 28.862 ms, elapsed = 121.215 ms.
+Time accumulated: CPU = 62.437 ms, elapsed = 121.216 ms.
+Peak resident memory used = 137 Mbytes.
+
+Time for Elaboration: CPU = 6.891 ms, elapsed = 9.26685 ms.
+Time accumulated: CPU = 69.36 ms, elapsed = 130.515 ms.
+Peak resident memory used = 145 Mbytes.
+
+Loading /usr/local/packages/cadence_2023/SPECTRE211/tools.lnx86/mdl/lib/64bit/libSpectreEH_sh.so ...
+
+Time for EDB Visiting: CPU = 1.718 ms, elapsed = 1.71804 ms.
+Time accumulated: CPU = 71.13 ms, elapsed = 132.284 ms.
+Peak resident memory used = 149 Mbytes.
+
+
+Notice from spectre during initial setup.
+    Multithreading is disabled due to the size of the design being too small.
+
+
+Global user options:
+
+Scoped user options:
+
+Circuit inventory:
+              nodes 18
+              bsim4 20    
+          capacitor 2     
+            isource 1     
+            vsource 6     
+
+Analysis and control statement inventory:
+               tran 1     
+
+Output statements:
+             .probe 2     
+           .measure 0     
+               save 0     
+
+
+Notice from spectre during initial setup.
+    APS enabled.
+
+Time for parsing: CPU = 1.299 ms, elapsed = 3.34787 ms.
+Time accumulated: CPU = 72.462 ms, elapsed = 135.666 ms.
+Peak resident memory used = 151 Mbytes.
+
+~~~~~~~~~~~~~~~~~~~~~~
+Pre-Simulation Summary
+~~~~~~~~~~~~~~~~~~~~~~
+   -   (APS) Multi-threading. The recommended number of threads is 1, consider adding +mt=1 on command line.
+~~~~~~~~~~~~~~~~~~~~~~
+
+*****************************************************
+Transient Analysis `timeSweep': time = (0 s -> 50 ns)
+*****************************************************
+
+Notice from spectre during IC analysis, during transient analysis `timeSweep'.
+    GminDC = 1 pS is large enough to noticeably affect the DC solution.
+        dV(X1.v_ca) = -5.91223 mV
+        Use the `gmin_check' option to eliminate or expand this report.
+
+DC simulation time: CPU = 917 us, elapsed = 918.15 us.
+
+Opening the PSFASCII file ../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.raw/timeSweep.tran.tran ...
+Important parameter values:
+    start = 0 s
+    outputstart = 0 s
+    stop = 50 ns
+    step = 10 ps
+    maxstep = 1 ns
+    ic = all
+    useprevic = no
+    skipdc = no
+    reltol = 1e-03
+    abstol(V) = 1 uV
+    abstol(I) = 1 pA
+    temp = 27 C
+    tnom = 27 C
+    tempeffects = all
+    errpreset = moderate
+    method = traponly
+    lteratio = 3.5
+    relref = sigglobal
+    cmin = 0 F
+    gmin = 1 pS
+    rabsshort = 1 mOhm
+
+
+Notice from spectre during transient analysis `timeSweep'.
+    Multithreading is disabled due to the size of the design being too small.
+
+
+Wildcard match summary:
+              probe v(*) :               19    
+              probe i(*) :               29    
+
+Output and IC/nodeset summary:
+                 probe  29      (current)
+                 probe  18      (voltage)
+
+.....................9.....................8.....................7.....................6.....................5.....................4.....................3.....................2.....................1.....................0
+Number of accepted tran steps =             1050
+
+Maximum value achieved for any signal of each quantity: 
+V: V(X1.M16:dbnode) = 1.5 V
+I: I(Vdd:p) = 449.2 uA
+If your circuit contains signals of the same quantity that are vastly different in size (such as high voltage circuitry combined with low voltage control circuitry), you should consider specifying global option `bin_relref=yes'.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Post-Transient Simulation Summary
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   -   To further speed up simulation, consider
+          add ++aps on command line
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+During simulation, the CPU load for active processors is :
+         0 (5.0 %)       6 (5.9 %)       8 (100.0 %)    10 (15.8 %)
+        12 (5.3 %)      14 (50.0 %)     15 (5.0 %)      17 (5.0 %)
+        Total: 191.9%
+Initial condition solution time: CPU = 931 us, elapsed = 931.025 us.
+Intrinsic tran analysis time:    CPU = 70.14 ms, elapsed = 70.7889 ms.
+Total time required for tran analysis `timeSweep': CPU = 71.686 ms, elapsed = 72.3338 ms, util. = 99.1%.
+Time accumulated: CPU = 147.333 ms, elapsed = 213.288 ms.
+Peak resident memory used = 158 Mbytes.
+
+Licensing Information:
+Lic Summary:
+[12:30:29.165552] Cdslmd servers:/usr/local/packages/cadence_2023/license.dat:/usr/local/packages/synopsys_2022/key
+[12:30:29.165560] Feature usage summary:
+[12:30:29.165561] Virtuoso_Multi_mode_Simulation
+
+
+Aggregate audit (12:30:29 PM, Sat Jul 26, 2025):
+Time used: CPU = 148 ms, elapsed = 214 ms, util. = 69%.
+Time spent in licensing: elapsed = 21.8 ms, percentage of total = 10.1%.
+Peak memory used = 159 Mbytes.
+Simulation started at: 12:30:28 PM, Sat Jul 26, 2025, ended at: 12:30:29 PM, Sat Jul 26, 2025, with elapsed time (wall clock): 214 ms.
+spectre completes with 0 errors, 0 warnings, and 5 notices.

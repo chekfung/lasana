@@ -12,14 +12,9 @@ __pycache__/
 # Ignore all netlist creation things
 *.nosetests
 *.net
-logs/*.sp
-logs/
 *.npy
-spice_fully_connected/*.raw
 catboost_info/
-test_cadence_flow/analog_lif_neuron_playground.raw/
 *tar.gz
-
 systemverilog/xcelium.d/
 systemverilog/test/xcelium.d/
 
@@ -27,9 +22,8 @@ systemverilog/test/xcelium.d/
 *.DS_Store*
 *spike_info*
 /data/MNIST/
-/LASANA_IMAC_applications/4_30_2025_full_run.csv
-/LASANA_IMAC_applications/*.csv
-/LASANA_IMAC_applications/separated_csvs*/
+/data/*run*
+/results/
 
 
 # C extensions
