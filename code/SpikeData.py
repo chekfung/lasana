@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.sparse.linalg import spsolve
+from scipy import sparse
 import bisect
 from stat_helpers import normalize
 

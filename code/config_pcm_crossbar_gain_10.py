@@ -1,6 +1,6 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Spiking Circuit Run Hyperparameters
-RUN_NAME = 'mac_unit_diff_10'                               # Name of the run that will be created in data/
+RUN_NAME = 'mac_unit_diff_10_run'                           # Name of the run that will be created in data/
 NUMBER_OF_RUNS = 1000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
@@ -111,7 +111,7 @@ VSS_CURRENT = 'i(vss)'
 DETERMINISTIC = True                    # Sets the random seeds for weight initialization to RANDOM_SEED below.  
 RANDOM_SEED = 42                        # Only if DETERMINISTIC is True. Makes the training the same every time for MLP and CatBoost
 PLOT_MATPLOTLIB_FIGS = False            # Show matplotlib figures
-SAVE_FIGS = True                        # Save correlation plots
+SAVE_FIGS = False                       # Save correlation plots
 SAVE_CATBOOST_MODEL = True              # Self Explanatory. Saves all of the catboost models
 SAVE_CATBOOST_CPP = False               # Saves Catboost but in C++ 
 SAVE_MLP_MODEL = True                   # Save MLP, sklearn models

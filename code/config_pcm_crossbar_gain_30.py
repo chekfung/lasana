@@ -1,6 +1,6 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Spiking Circuit Run Hyperparameters
-RUN_NAME = 'mac_unit_diff_30'                               # Name of the run that will be created in data/
+RUN_NAME = 'mac_unit_diff_30_run'                           # Name of the run that will be created in data/
 NUMBER_OF_RUNS = 1000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
