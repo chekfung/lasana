@@ -6,6 +6,7 @@ import seaborn as sns
 from matplotlib import cm
 from matplotlib.ticker import MultipleLocator
 import time
+import random
 from prettytable import PrettyTable
 from datetime import date    
 today = date.today().isoformat()
@@ -22,10 +23,12 @@ args = parser.parse_args()
 
 inject_config(args.config, globals())
 
-
+# Set seeds if the run is deterministic
+if DETERMINISTIC:
+    random.seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
+    
 figure_counter = 0
-
-# TODO: Fix seed so that always the same :) (Not sure if we actually need to do this but yeah)
 
 def adc(voltage, v_min=-0.8, v_max=0.8, bits=8):
     """
@@ -158,18 +161,6 @@ baseline_metrics = calculate_metrics(y_test, ols_y_pred)
 table.add_row(["OLS", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 print("Trained OLS")
 
-# ----------------------
-# XGBoost
-# NOTE: Decision Tree Based Models do not need scaled data :O
-hyperparams = {
-    'learning_rate': 0.03,
-    'max_depth': 10,
-    'n_estimators': 500,
-    'subsample': 0.7,
-    'lambda': 1
-}
-
-
 # -------------------------
 # CatBoost
 catboost_params = {
@@ -181,6 +172,9 @@ catboost_params = {
     'eval_metric':'RMSE',
     'verbose': False
 }
+
+if DETERMINISTIC:
+    catboost_params['random_seed'] = RANDOM_SEED
 
 catboost_model_name = "mac_catboost_output_11_9"
 cat_y_pred, train_time, test_time = run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, catboost_params, SAVE_CATBOOST_MODEL, os.path.join(dataset_ml_models, catboost_model_name),SAVE_CATBOOST_CPP, early_stopping=True)
@@ -214,6 +208,9 @@ hyperparameters_mlp = {
     'early_stopping':True,
     'validation_fraction': VALIDATION_SPLIT
 }
+
+if DETERMINISTIC:
+    hyperparameters_mlp['random_state'] = RANDOM_SEED
 
 mlp_model_name = "mac_mlp_output_11_9"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_name))

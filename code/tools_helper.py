@@ -12,6 +12,8 @@ This file is used as a wrapper around tools (LTSpice, Cadence Virtuoso).
 This is a research project funded under the SLAM lab at UT Austin
 Author: Jason Ho
 
+NOTE: LTSpice is deprecated and no longer supported in this current version of the scripts.
+
 '''
 
 def write_line_with_newline(fp, line):

@@ -1,30 +1,55 @@
+import os 
+from collections import defaultdict
+from prettytable import PrettyTable
+from datetime import date    
+import time
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
-import os 
+pd.options.mode.chained_assignment = None  
+import joblib
 from catboost import CatBoostRegressor, CatBoostClassifier
-import time
-from collections import defaultdict
-from joblib import load
 from sklearn.metrics import mean_squared_error, mean_absolute_error,r2_score, mean_absolute_percentage_error
 from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, confusion_matrix
-from prettytable import PrettyTable
-from scipy.stats import zscore
 from stat_helpers import normalize
-import joblib
-from datetime import date    
 from predict_ml_model_helpers import write_prettytable
+import argparse
+
+# Added Argparse for top script to be able to call with oracle on here to run and produce table III LASANA-O
+parser = argparse.ArgumentParser()
+parser.add_argument('--oracle', action='store_true', help='Enable oracle mode')
+args = parser.parse_args()
+ORACLE = args.oracle
+print("ORACLE:", ORACLE)
+
+# Initialize some global timer variables that are used
 today = date.today().isoformat()
+figure_counter = 0
 
-
-# FIXME: NEED TO FIX THIS GUY UP :)
-
-# Get some timers in here to figure out what is going on :)
-import time
 timers = {}
 loop_timers = defaultdict(list)
 
+# -------------
+# Hyperparameters # FIXME: NEED TO FIX THIS GUY UP :)
+RUN_NAME = 'spiking_20000_runs_4_10'
+MODEL_RUN_NAME = "larger_weight_range"
+CSV_NAME = 'test1.csv'
+LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
+NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
+NUM_NEURONS = 20000    
+PERIOD = 5 * 10**-9  
+LOAD_IN_MLP_MODELS = True
+
+SHOW_FIGS = False
+SAVE_FIGS = True   # For just the MSE plot
+
+LIST_OF_COLUMNS_X += NEURON_PARAMS
+NUM_NEURON_PARAMS = len(NEURON_PARAMS)
+
+# --------------------------------------
+
+# Global Timing Functions to assess timing.
 def start_timer(name="default"):
     timers[name] = time.time()
 
@@ -64,16 +89,7 @@ def pretty_print_loop_timers():
 
     print(table)
 
-# # Usage example
-# start_timer("Data Loading")
-# # Simulating a task that takes 1.5 seconds
-# time.sleep(1.5)
-# stop_timer("Data Loading")
-
-# start_timer("Data Processing")
-# # Simulating a task that takes 2 seconds
-# time.sleep(2)
-# stop_timer("Data Processing")
+# --- Metrics Definitions ---
 
 def mape_metric(y_true,y_pred):
     number_of_guys = y_true.shape[0]
@@ -100,28 +116,18 @@ def regression_metrics_no_array(y_true,y_pred, print_mape=False):
         mape = mean_absolute_percentage_error(y_true, y_pred) * 100
         r2 = r2_score(y_true, y_pred)
 
-    # For MAPE, try and get rid of the guys where there is no prediction.
     if print_mape:
         for i in range(y_true.shape[0]):
             error_percentage = np.abs(y_true[i] - y_pred[i]) / y_true[i]
             print("{:.3f} {:.3f} {:.3f}".format(y_true[i], y_pred[i], error_percentage))
 
-
         if y_true.shape[0] != 0:
-            #mape = mape_metric(double_mask_y_true, double_mask_y_pred) * 100
-
             # Manually calculate MAPE.
-            number_of_guys = y_true.shape[0]
-            guy = np.abs((y_true - y_pred) / y_true)
-            
-            print("Difference: {:.3f}, Number of Guys: {}".format(np.sum(guy), number_of_guys))
-            #mape = np.sum(guy) / number_of_guys
+            number_of_values = y_true.shape[0]
+            temp = np.abs((y_true - y_pred) / y_true)
+            print("Difference: {:.3f}, Number of Guys: {}".format(np.sum(temp), number_of_values))
 
     return mse, mae, mape, r2
-
-def remove_outliers_zscore(column, z_score):
-    z_scores = (column - column.mean()) / column.std()
-    return column[abs(z_scores) < z_score]  # Keeping values within 3 standard deviations
 
 def regression_metrics(y_true, y_pred, decimal_places=7):
     # Note: MAPE does not work due to zeroes in the data
@@ -137,8 +143,6 @@ def regression_metrics(y_true, y_pred, decimal_places=7):
     return formatted_metrics
 
 def classification_metrics(y_true, y_pred, decimal_places=7):
-    # print(len(y_true))
-    # print(len(y_pred))
     acc = accuracy_score(y_true, y_pred)
     roc_auc = roc_auc_score(y_true, y_pred)
     prec = precision_score(y_true, y_pred)
@@ -150,31 +154,14 @@ def classification_metrics(y_true, y_pred, decimal_places=7):
     formatted_metrics = [format_string.format(metric) for metric in [acc, roc_auc, prec, recall, f1_score, mse]]
     return formatted_metrics
 
-figure_counter = 0
-
-pd.options.mode.chained_assignment = None  # default='warn'
-
 # --------------------------------------
-# Hyperparameters
-RUN_NAME = 'spiking_20000_runs_4_10'#"new_run_20000_4_7_25"#"test_run_no_negative_weights_1_13"#"test_run_negative_weights_1_13_2000_runs"#"20000_training_set_with_weights"#""VARY_0.5_1.5_1000_RUNS"
-MODEL_RUN_NAME = "larger_weight_range"#"explicit_edge_case_increase_spk_smaller_knob_range_3_10_25"#"test_run_no_negative_weights_1_14_low_cap_spectre"#"test_run_no_negative_weights_1_13"#"add_weights_1000_runs_vary_0.5_1.5"
-CSV_NAME = 'test1.csv'
-LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
-NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
-LOAD_IN_MLP_MODELS = True
-
-SHOW_FIGS = True
-SAVE_FIGS = False   # For just the MSE, MAPE, and MAE plots
-SAVE_FIGS_2 = False  # For anything that is not MSEs and other stuff
-# --------------------------------------
-LIST_OF_COLUMNS_X += NEURON_PARAMS
-NUM_NEURON_PARAMS = len(NEURON_PARAMS)
-NUM_NEURONS = 20000      
+# Start of Script
+# Load in the Test Dataset that will be run
 
 # Find full dataset and put into dataframe
-dataset_csv_filepath = os.path.join('logs', RUN_NAME, CSV_NAME)
-model_filepath = os.path.join('logs', MODEL_RUN_NAME, 'ml_models')
-period = 5 * 10**-9
+figure_src_directory = os.path.join('results')
+dataset_csv_filepath = os.path.join('../data', RUN_NAME, CSV_NAME)
+model_filepath = os.path.join('../data', MODEL_RUN_NAME, 'ml_models')
 
 # --------
 start_timer("Load CSV and Prepare Data")
@@ -228,7 +215,6 @@ for time_step_id in range (num_time_steps):
     # Rename all in-out to spike, and all leak to leak
     answers_per_timestep['Event_Type'] = answers_per_timestep['Event_Type'].replace({'in-out': 'spike', 'in-no_out': 'spike', 'leak-1': 'leak', 'leak-2': 'leak'})
 
-
     answers_per_timestep = answers_per_timestep.sort_values(by=['Event_Type', "Run_Number"], ascending=[True, True])
     number_of_time_steps_answers[time_step_id] = answers_per_timestep
 
@@ -246,22 +232,8 @@ stop_timer("Generate Time Step DataFrame Input Spikes")
 
 # ------------
 start_timer("Load Models")
+
 # Load in Catboost Models
-# e_static_model = CatBoostRegressor()
-# e_static_model.load_model(os.path.join(model_filepath, 'catboost_energy_5_30_static.cbm'))
-
-# e_model = CatBoostRegressor()
-# e_model.load_model(os.path.join(model_filepath, 'catboost_energy_5_30_dynamic.cbm'))
-
-# l_model = CatBoostRegressor()
-# l_model.load_model(os.path.join(model_filepath, 'catboost_latency_5_30.cbm'))
-
-# neuron_state_model = CatBoostRegressor()
-# neuron_state_model.load_model(os.path.join(model_filepath, 'catboost_neuron_state_5_30.cbm'))
-
-# spike_or_not_model = CatBoostClassifier()
-# spike_or_not_model.load_model(os.path.join(model_filepath, 'catboost_spike_or_not_5_30.cbm'))
-
 e_static_model = CatBoostRegressor()
 e_static_model.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_7.cbm'))
 
@@ -320,7 +292,6 @@ start_timer("Static Energy Model 1 Sample")
 e_static_model.predict(all_params_for_ml)
 stop_timer("Static Energy Model 1 Sample")
 
-
 # ----------
 start_timer("Initialize Algorithm to zeros")
 
@@ -347,7 +318,6 @@ spike_events_spike_or_not_per_time_step = defaultdict(list)
 stop_timer("Initialize Algorithm to zeros")
 
 # ---------------
-
 start_timer("Algorithm Run")
 for time_step_id in range(num_time_steps):
     # Batch all the input spikes together
@@ -359,7 +329,7 @@ for time_step_id in range(num_time_steps):
         ids_not_spiking = np.setdiff1d(possible_neuron_ids, spike_neuron_ids)
 
         weights = np.zeros((ids_not_spiking.shape[0], 1))
-        times_to_include_in_timing_event = ((time_step_id - time_since_last_update[ids_not_spiking]) * period).reshape(-1,1)
+        times_to_include_in_timing_event = ((time_step_id - time_since_last_update[ids_not_spiking]) * PERIOD).reshape(-1,1)
         neuron_states = global_neuron_state[ids_not_spiking].reshape(-1,1)
         leak_params = neuron_params[ids_not_spiking]
         all_params_for_ml = np.concatenate((neuron_states, weights, times_to_include_in_timing_event, leak_params), axis=1)
@@ -376,7 +346,7 @@ for time_step_id in range(num_time_steps):
         leak_events_neuron_state_per_time_step[time_step_id].append((ids_not_spiking, next_neuron_state))
         leak_events_energy_per_time_step[time_step_id].append((ids_not_spiking, energy))
 
-    # Now go through all the spike events
+    # Now go through all the input events
     if not spike_events.empty:
         time_since_last = time_since_last_update[spike_neuron_ids]
         mask = time_since_last < (time_step_id - 1)
@@ -385,25 +355,24 @@ for time_step_id in range(num_time_steps):
         start_timer("Leak Event Processing")
         if neurons_with_leak.shape[0] > 0:
             start_timer("Leak Event Create Input Batch")
-            times = ((time_step_id - time_since_last[mask] - 1) * period).reshape(-1,1)
+            times = ((time_step_id - time_since_last[mask] - 1) * PERIOD).reshape(-1,1)
             weights = np.zeros((neurons_with_leak.shape[0], 1))
             leak_params = neuron_params[neurons_with_leak]
-            neuron_states = global_neuron_state[neurons_with_leak].reshape(-1,1)
 
-            # TODO: Experiment to change neuron state usage
-
-            # if time_step_id == num_time_steps-1:
-            #     neuron_states = global_neuron_state[neurons_with_leak].reshape(-1,1)
-            # else:
-            #     neuron_states = np.array(number_of_time_steps_leaks[time_step_id]["Cap_Voltage_At_Input_Start"]).reshape(-1,1)
-
-            # End Experiment
+            if not ORACLE:
+                neuron_states = global_neuron_state[neurons_with_leak].reshape(-1,1)
+            else: 
+                # Experiment to change neuron state usage
+                if time_step_id == num_time_steps-1:
+                    neuron_states = global_neuron_state[neurons_with_leak].reshape(-1,1)
+                else:
+                    neuron_states = np.array(number_of_time_steps_leaks[time_step_id]["Cap_Voltage_At_Input_Start"]).reshape(-1,1)
+                # End Experiment
 
             all_params_for_ml = np.concatenate((neuron_states, weights, times, leak_params), axis=1)
             stop_timer_loop("Leak Event Create Input Batch")
 
             # ----
-
             start_timer("Leak Event ML Models")
             if LOAD_IN_MLP_MODELS:
                 all_params_for_ml = std_scaler.transform(all_params_for_ml)
@@ -426,14 +395,6 @@ for time_step_id in range(num_time_steps):
             leak_events_energy_per_time_step[time_step_id].append((neurons_with_leak, energy))
             stop_timer_loop("Leak Event House Keeping")
 
-
-            # print("Time Step: {}".format(time_step_id))
-            # print("Spiking Ids: ", np.array(spike_neuron_ids))
-            # print("Last Spike Time:", np.array(time_since_last_update))
-            # print(all_params_for_ml)
-            # print(number_of_time_steps_leaks[time_step_id])
-            # print("\n\n")
-
         stop_timer_loop("Leak Event Processing")
 
         # --------
@@ -442,12 +403,14 @@ for time_step_id in range(num_time_steps):
 
         start_timer("Spike Event Input Batch Creation")
         params = neuron_params[spike_neuron_ids]
-        times = np.ones((spike_neuron_ids.shape[0], 1)) * period
+        times = np.ones((spike_neuron_ids.shape[0], 1)) * PERIOD
         weights = np.array(spike_events["Weight"]).reshape(-1,1)
-        neuron_states = global_neuron_state[spike_neuron_ids].reshape(-1,1)
 
-        # TODO: Experiment to change neuron state usage
-        #neuron_states = np.array(spike_events["Cap_Voltage_At_Input_Start"]).reshape(-1,1)
+        if not ORACLE:
+            neuron_states = global_neuron_state[spike_neuron_ids].reshape(-1,1)
+        else:
+            # Experiment to change neuron state usage
+            neuron_states = np.array(spike_events["Cap_Voltage_At_Input_Start"]).reshape(-1,1)
 
         all_together = np.concatenate((neuron_states, weights, times, params), axis=1)
         stop_timer_loop("Spike Event Input Batch Creation")
@@ -455,7 +418,6 @@ for time_step_id in range(num_time_steps):
         # --------
 
         start_timer("Spike ML Model Inference")
-        # Add in here ability to use the std scaler :O
 
         if LOAD_IN_MLP_MODELS:
             all_together = std_scaler.transform(all_together)
@@ -513,7 +475,6 @@ stop_timer("Algorithm Run")
 
 # --------------
 # Do Post Processing :)
-
 # Print out all the timings aggregated
 pretty_print_loop_timers()
 
@@ -532,13 +493,12 @@ for time_step_id in range(num_time_steps):
     energy_guys = leak_events_energy_per_time_step[time_step_id]
 
     if len(leak_time) > 0:
-        # Combine guys 
+        # Combine all arrays
         combined_arrays = [np.concatenate(arrays) for arrays in zip(*leak_time)]
         energy_combined = [np.concatenate(arrays) for arrays in zip(*energy_guys)]
 
         # Combine with energy, and then sort by the neuron ID
         combined_arrays.append(energy_combined[1])
-
         stacked = np.stack(combined_arrays, axis=-1)
         sorted_combined_2d_array = stacked[np.argsort(stacked[:,0])]
 
@@ -554,7 +514,6 @@ for time_step_id in range(num_time_steps):
             event_timeline[leak_id].append("leak")
 
             # Put the leak timestep guy in here
-            # df[["Run_Number","Event_Type", 'Output_Spike', 'Energy', "Latency", "Cap_Voltage_At_Output_End"]]
             timestep_leak_info = (leak_id, "leak", 0, energy, 0, next_neuron_state)
             per_timestep_guy[time_step_id].append(timestep_leak_info)
 
@@ -597,9 +556,6 @@ predicted_spike_or_not = []
 # Note: Output in this order of columns ['Output_Spike', 'Energy', "Latency", "Cap_Voltage_At_Output_End"]
 spice_results = []
 
-# Per Neuron Accuracy
-num_metrics = 3
-
 # Stack everything together
 # Get per neuron energy :)
 neuron_energies = np.zeros(number_of_neurons)
@@ -617,24 +573,8 @@ for neuron_id in range(number_of_neurons):
 
 total_neuron_energies = np.sum(predicted_energy)
 
-
 # Vstack everything for spice_results into one big array
 spice_results_together = np.vstack(spice_results)
-
-# Get CDFs of errors
-energy_delta = np.abs(spice_results_together[:,1] - np.array(predicted_energy))
-latency_delta = np.abs(spice_results_together[:,2] - np.array(predicted_latency))
-
-# Get them in terms of percentage error :)
-energy_min = np.min(spice_results_together[:,1])
-energy_max = np.max(spice_results_together[:,1])
-latency_min = np.min(spice_results_together[:,2])
-latency_max = np.max(spice_results_together[:,2])
-
-# Get in terms of error percentages :)
-energy_percent_error = (energy_delta / ((energy_min + energy_max) / 2)) * 100
-latency_percent_error = (latency_delta / ((latency_min + latency_max) / 2)) * 100
-
 
 # Get statistics per timestep :)
 latency_statistics = np.zeros((num_time_steps, 4))
@@ -670,165 +610,30 @@ for time_step_id in range(num_time_steps):
 
 # -------------
 # Figure save make directory
-figure_src_directory = os.path.join('figure_src', RUN_NAME)
-if SAVE_FIGS or SAVE_FIGS_2:
-    
+if SAVE_FIGS:
     # Make necessary directories by using the most nested directory
     if not os.path.exists(figure_src_directory):
         os.makedirs(figure_src_directory)
         print(f"Directory '{figure_src_directory}' created successfully.")
 
-# Save MSE Things so that I can just have a separate script if we need to change anything.
-plot_data = np.stack([
-    normalize(energy_statistics[:, 0]),
-    normalize(static_energy_statistics[:, 0]),
-    normalize(latency_statistics[:, 0]),
-    normalize(neuron_state_statistics[:, 0])
-], axis=1)  # Shape: (N, 4)
-
-# Save as .npy file
-np.save("normalized_batch_transient_analysis_data.npy", plot_data)
-
-
-
 # Create figures for per-timestep guys
-plt.figure(figure_counter, figsize=(5.5,2.2))
+time_vector = np.linspace(0, 500, 100)
+plt.figure(figure_counter, figsize=(5.5,2))
 figure_counter+=1
-plt.plot(normalize(energy_statistics[:, 0]), linewidth=1.75)
-plt.plot(normalize(static_energy_statistics[:, 0]), linewidth=1.75, linestyle='--')
-plt.plot(normalize(latency_statistics[:, 0]), linewidth=1.75, linestyle='-.')
-plt.plot(normalize(neuron_state_statistics[:, 0]), linewidth=1.75, linestyle=':', color='black')
-plt.xticks(fontsize=10)
-plt.yticks(fontsize=10)
-plt.xlabel("Time Step (5ns step)", fontsize=10)
-plt.ylabel("Normalized MSE", fontsize=10)
+plt.plot(time_vector,normalize(energy_statistics[:, 0]), linewidth=1.75)
+plt.plot(time_vector,normalize(static_energy_statistics[:, 0]), linewidth=1.75, linestyle='--')
+plt.plot(time_vector,normalize(latency_statistics[:, 0]), linewidth=1.75, linestyle='-.')
+plt.plot(time_vector,normalize(neuron_state_statistics[:, 0]), linewidth=1.75, linestyle=':', color='black')
+plt.xticks(fontsize=9)
+plt.yticks(fontsize=9)
+plt.xlabel("Time Step (ns)", fontsize=9)
+plt.ylabel("Normalized MSE", fontsize=9)
 #plt.title("MSE Vs. Time")
 plt.legend(['Dynamic Energy', "Static Energy","Latency", "State"],ncol=4, prop={'size': 8},loc='lower center', framealpha=0.5)
 plt.tight_layout()
 if SAVE_FIGS:
     figure_name = "MSE_over_time" + today
     plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-plt.figure(figure_counter, figsize=(5.5,2.2))
-figure_counter+=1
-plt.plot(normalize(energy_statistics[:, 1]))
-plt.plot(normalize(static_energy_statistics[:, 1]))
-plt.plot(normalize(latency_statistics[:, 1]))
-plt.plot(normalize(neuron_state_statistics[:, 1]))
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.xlabel("Time Step (5ns step)", fontsize=14)
-plt.ylabel("Normalized MAE", fontsize=14)
-#plt.title("MSE Vs. Time")
-plt.legend(['Dynamic Energy', "Static Energy","Latency", "State"],loc='lower right',ncol=2)
-plt.tight_layout()
-# if SAVE_FIGS:
-#     figure_name = "MAE_over_time" + today
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-
-plt.figure(figure_counter, figsize=(5.5,3))
-figure_counter+=1
-plt.plot(normalize(energy_statistics[:, 2]))
-plt.plot(normalize(static_energy_statistics[:, 2]))
-plt.plot(normalize(latency_statistics[:, 2]))
-plt.plot(normalize(neuron_state_statistics[:, 2]))
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.xlabel("Time Step (5ns step)", fontsize=14)
-plt.ylabel("Normalized MAPE", fontsize=14)
-#plt.title("MSE Vs. Time")
-plt.legend(['Dynamic Energy', "Static Energy","Latency", "State"],loc='lower right',ncol=2)
-plt.tight_layout()
-# if SAVE_FIGS:
-#     figure_name = "MAPE_over_time" + today
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-
-# Show each one unnormalized to see what is going on for each of the energy, latency, and neurons tate
-# plt.figure(figure_counter, figsize=(5.5,3))
-# figure_counter+=1
-# plt.plot(energy_statistics[:, 2])
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.xlabel("Time Step (4ns step)", fontsize=14)
-# plt.ylabel("Normalized MAPE", fontsize=14)
-# #plt.title("MSE Vs. Time")
-# plt.legend(['Energy'],loc='upper right')
-# plt.tight_layout()
-
-# plt.figure(figure_counter, figsize=(5.5,3))
-# figure_counter+=1
-# plt.plot(latency_statistics[:, 2])
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.xlabel("Time Step (4ns step)", fontsize=14)
-# plt.ylabel("Normalized MAPE", fontsize=14)
-# #plt.title("MSE Vs. Time")
-# plt.legend(["Latency"],loc='upper right')
-# plt.tight_layout()
-
-# plt.figure(figure_counter, figsize=(5.5,3))
-# figure_counter+=1
-# plt.plot(neuron_state_statistics[:, 2])
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.xlabel("Time Step (4ns step)", fontsize=14)
-# plt.ylabel("Normalized MAPE", fontsize=14)
-# #plt.title("MSE Vs. Time")
-# plt.legend(["State"],loc='upper right')
-# plt.tight_layout()
-
-
-# plt.figure(figure_counter)
-# figure_counter+=1
-# plt.plot(energy_statistics[:,1])
-# plt.plot(latency_statistics[:,1])
-# plt.plot(neuron_state_statistics[:,1])
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.xlabel("Time Step (4ns)", fontsize=14)
-# plt.ylabel("Normalized MAE", fontsize=14)
-# plt.title("MAE Vs. Time")
-# plt.legend(['Energy', "Latency", "State"])
-# plt.tight_layout()
-
-# plt.figure(figure_counter)
-# figure_counter+=1
-# plt.hist(energy_percent_error, density=True, bins=1000,cumulative=True, label='CDF',
-#          histtype='step', alpha=0.8, color='k', linewidth=2)
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.xlabel("Absolute Energy Percentage Error", fontsize=14)
-# plt.ylabel("Density", fontsize=14)
-# #plt.title("CDF of Absolute Energy Errors")
-# #plt.xlim(-0.002,0.5)
-# plt.tight_layout()
-# if SAVE_FIGS:
-#     figure_name = "energy_error_cdf"
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-
-# plt.figure(figure_counter)
-# figure_counter+=1
-# plt.hist(latency_percent_error, density=True, bins=1000,cumulative=True, label='CDF',
-#          histtype='step', alpha=0.8, color='k', linewidth=2)
-# plt.xticks(fontsize=12)
-# plt.yticks(fontsize=12)
-# plt.xlabel("Absolute Latency Percentage Error", fontsize=14)
-# plt.ylabel("Density", fontsize=14)
-# #plt.title("CDF of Absolute Latency Errors")
-# #plt.xlim(-0.01,2.5)
-# plt.tight_layout()
-# if SAVE_FIGS:
-#     figure_name = "latency_error_cdf"
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-#     plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
 
 # Get Metrics
 # For regressors
@@ -848,9 +653,14 @@ metrics = regression_metrics(np.array(spice_results_together[:, 2])[bit_mask], n
 regressor_table.add_row(["Latency"]+metrics)
 metrics = regression_metrics(spice_results_together[:, 3], predicted_neuron_state)
 regressor_table.add_row(["Neuron State (V(C_mem))"]+metrics)
-
 print(regressor_table)
-write_prettytable('batch_transient_analysis_regressor_table_oracle.csv', regressor_table)
+
+if ORACLE:
+    tag = "oracle"
+else:
+    tag = "predicted"
+
+write_prettytable(os.path.join('results', f"batch_transient_analysis_regressor_table_{tag}.csv"), regressor_table)
 
 # For classifiers
 classifier_table = PrettyTable()
@@ -860,107 +670,9 @@ metrics = classification_metrics(spice_results_together[:, 0], predicted_spike_o
 classifier_table.add_row(["Output Spike or Not"]+metrics)
 
 print(classifier_table)
-write_prettytable('batch_transient_analysis_classifier_table_oracle.csv', classifier_table)
+write_prettytable(os.path.join('results', f"batch_transient_analysis_classifier_table_{tag}.csv"), classifier_table)
 
-# Confusion Matrix
-cm = confusion_matrix(spice_results_together[:, 0], predicted_spike_or_not)
-
-print("Confusion Matrix:")
-print(cm)
-
-plt.figure(figure_counter)
-figure_counter+=1
-sns.heatmap(cm, annot=True, fmt='g', cmap='Blues', cbar=False,annot_kws={"fontsize": 14},
-            xticklabels=['Predicted No Spike', 'Predicted Spike'],
-            yticklabels=['Actual No Spike', 'Actual Spike'])
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.xlabel('ML Prediction', fontsize=14)
-plt.ylabel('SPICE Results', fontsize=14)
-plt.title('Spike or Not Confusion Matrix',fontsize=14)
-plt.tight_layout()
-if SAVE_FIGS_2:
-    figure_name = "confusion_matrix" + today
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-# -------------
-# Plot Something to see if we make sense!
-neuron_to_look_at = 5
-
-# Energy
-plt.figure(figure_counter)
-figure_counter+=1
-
-plt.plot(np.array(neuron_runs[neuron_to_look_at]["Energy"]), label='SPICE')
-plt.plot(energy_per_neuron_event[neuron_to_look_at], label='Predicted')
-plt.legend()
-plt.xlabel("Event Sample",fontsize=14)
-plt.ylabel("Dynamic Energy (pJ)",fontsize=14)
-plt.title("Dynamic Energy (Predicted Vs. SPICE)",fontsize=14)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.tight_layout()
-if SAVE_FIGS_2:
-    figure_name = "energy_event_sim" + today
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-
-# Latency
-plt.figure(figure_counter)
-figure_counter+=1
-plt.plot(latency_per_neuron_event[neuron_to_look_at], label='Predicted')
-plt.plot(np.array(neuron_runs[neuron_to_look_at]["Latency"]), label='SPICE')
-plt.legend()
-plt.xlabel("Event Samples",fontsize=14)
-plt.ylabel("Latency (ns)",fontsize=14)
-plt.title("Predicted Neuron Latency Transient Run",fontsize=14)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.tight_layout()
-if SAVE_FIGS_2:
-    figure_name = "latency_event_sim" + today
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-
-# Spike or Not
-plt.figure(figure_counter)
-figure_counter+=1
-plt.plot(spike_or_not_per_neuron_event[neuron_to_look_at], label='Predicted')
-plt.plot(np.array(neuron_runs[neuron_to_look_at]["Output_Spike"]), label='SPICE')
-plt.legend()
-plt.xlabel("Event Samples",fontsize=14)
-plt.ylabel("Output Spike or Not",fontsize=14)
-plt.title("Output Spike Tracker Transient Run",fontsize=14)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.tight_layout()
-if SAVE_FIGS_2:
-    figure_name = "spike_or_not_event_sim" + today
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-
-# Predicted Neuron State Over Time
-plt.figure(figure_counter)
-figure_counter+=1
-plt.plot(neuron_state_per_neuron_event[neuron_to_look_at], label='Predicted')
-plt.plot(np.array(neuron_runs[neuron_to_look_at]["Cap_Voltage_At_Output_End"]), label='SPICE')
-plt.legend()
-plt.xlabel("Event Samples",fontsize=14)
-plt.ylabel("Neuron C_mem Voltage",fontsize=14)
-plt.title("Predicted Neuron Internal State Transient Run",fontsize=14)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
-plt.tight_layout()
-if SAVE_FIGS_2:
-    figure_name = "neuron_state_event_sim" + today
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=300)
-
-#print(neuron_energies)
+# ----
 print(f"Total Predicted Energy: {total_neuron_energies}")
 total_real_energies = np.sum(spice_results_together[:,1])
 print(f"Total SPICE Energy: {total_real_energies}")
@@ -972,4 +684,3 @@ if SHOW_FIGS:
     plt.pause(0.001) # Pause for interval seconds.
     input("hit[enter] to end.")
     plt.close('all') # all open plots are correctly closed after each run
-

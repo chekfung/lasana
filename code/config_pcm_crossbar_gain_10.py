@@ -108,14 +108,17 @@ VSS_CURRENT = 'i(vss)'
 # ----------------------------- END Analyze Dataset Hyperparameters ------------------------------ #
 
 # ----------------------------- BEGIN Model Training Hyperparameters ------------------------------ #
-PLOT_MATPLOTLIB_FIGS = False
-SAVE_FIGS = True
-SAVE_CATBOOST_MODEL = True
-SAVE_CATBOOST_CPP = False
-SAVE_MLP_MODEL = True
-SAVE_PYTORCH_MLP_MODEL = False
+DETERMINISTIC = True                    # Sets the random seeds for weight initialization to RANDOM_SEED below.  
+RANDOM_SEED = 42                        # Only if DETERMINISTIC is True. Makes the training the same every time for MLP and CatBoost
+PLOT_MATPLOTLIB_FIGS = False            # Show matplotlib figures
+SAVE_FIGS = True                        # Save correlation plots
+SAVE_CATBOOST_MODEL = True              # Self Explanatory. Saves all of the catboost models
+SAVE_CATBOOST_CPP = False               # Saves Catboost but in C++ 
+SAVE_MLP_MODEL = True                   # Save MLP, sklearn models
+SAVE_PYTORCH_MLP_MODEL = False          # Save MLP, PyTorch models (not supported right now)
 VALIDATION_SPLIT = 0.15
 TRAIN_TEST_SPLIT = 0.15      # Percentage of dataset dedicated to test set
+
 
 LIST_OF_COLUMNS_X_MAC = ["Input_Total_Time", "Last_Output_Value"]
 

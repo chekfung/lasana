@@ -6,6 +6,7 @@ import seaborn as sns
 from matplotlib import cm
 from matplotlib.ticker import MultipleLocator
 import time
+import random
 from prettytable import PrettyTable
 from datetime import date    
 today = date.today().isoformat()
@@ -22,8 +23,10 @@ args = parser.parse_args()
 
 inject_config(args.config, globals())
 
-# TODO: Fix seed so that always the same :) (Not sure if we actually need to do this but yeah)
-
+# Set seeds if the run is deterministic
+if DETERMINISTIC:
+    random.seed(RANDOM_SEED)
+    np.random.seed(RANDOM_SEED)
 
 figure_counter = 0
 
@@ -121,6 +124,9 @@ catboost_params = {
     'eval_metric':'RMSE'
 }
 
+if DETERMINISTIC:
+    catboost_params['random_seed'] = RANDOM_SEED
+
 catboost_model_save_name = "catboost_neuron_state_11_7"
 cat_y_pred, train_time, test_time = run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, catboost_params, SAVE_CATBOOST_MODEL, os.path.join(dataset_ml_models, catboost_model_save_name),SAVE_CATBOOST_CPP)
 baseline_metrics = calculate_metrics(y_test, cat_y_pred)
@@ -139,6 +145,9 @@ hyperparameters_mlp = {
     'early_stopping':True,
     'validation_fraction': VALIDATION_SPLIT
 }
+
+if DETERMINISTIC:
+    hyperparameters_mlp['random_state'] = RANDOM_SEED
 
 mlp_model_save_name = "mlp_neuron_state_11_8"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_save_name))
