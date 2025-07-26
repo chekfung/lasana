@@ -31,13 +31,13 @@ timers = {}
 loop_timers = defaultdict(list)
 
 # -------------
-# Hyperparameters # FIXME: NEED TO FIX THIS GUY UP :)
-RUN_NAME = 'spiking_20000_runs_4_10'
-MODEL_RUN_NAME = "larger_weight_range"
-CSV_NAME = 'test1.csv'
+# Hyperparameters 
+RUN_NAME = 'spiking_20000_runs'
+MODEL_RUN_NAME = "spiking_neuron_run"
+CSV_NAME = 'spiking_neuron_dataset.csv'
 LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
 NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
-NUM_NEURONS = 20000    
+NUM_NEURONS = 1000    
 PERIOD = 5 * 10**-9  
 LOAD_IN_MLP_MODELS = True
 
@@ -109,12 +109,10 @@ def regression_metrics_no_array(y_true,y_pred, print_mape=False):
         mse = 0
         mae = 0
         mape = 0
-        r2 = 0
     else: 
         mse = mean_squared_error(y_true, y_pred)
         mae = mean_absolute_error(y_true, y_pred)
         mape = mean_absolute_percentage_error(y_true, y_pred) * 100
-        r2 = r2_score(y_true, y_pred)
 
     if print_mape:
         for i in range(y_true.shape[0]):
@@ -127,19 +125,17 @@ def regression_metrics_no_array(y_true,y_pred, print_mape=False):
             temp = np.abs((y_true - y_pred) / y_true)
             print("Difference: {:.3f}, Number of Guys: {}".format(np.sum(temp), number_of_values))
 
-    return mse, mae, mape, r2
+    return mse, mae, mape
 
 def regression_metrics(y_true, y_pred, decimal_places=7):
     # Note: MAPE does not work due to zeroes in the data
     mse = mean_squared_error(y_true, y_pred)
     mae = mean_absolute_error(y_true, y_pred)
     mape = mape_metric(np.array(y_true), np.array(y_pred)) * 100
-    r2 = r2_score(y_true, y_pred)
-    average_error = float(np.abs(np.sum(np.array(y_true)) - np.sum(np.array(y_pred))) / np.sum(np.array(y_true)) * 100)
 
     # Format the metrics with the specified number of decimal places
     format_string = "{:." + str(decimal_places) + "f}"
-    formatted_metrics = [format_string.format(metric) for metric in [mse, mae, mape, r2, average_error]]
+    formatted_metrics = [format_string.format(metric) for metric in [mse, mae, mape]]
     return formatted_metrics
 
 def classification_metrics(y_true, y_pred, decimal_places=7):
@@ -280,20 +276,9 @@ leak_params = np.zeros((1, 4))
 neuron_states = np.zeros((1, 1))
 all_params_for_ml = np.concatenate((neuron_states, weights, times, leak_params), axis=1)
 
-start_timer("Dynamic Energy Model 1 Sample")
-e_model.predict(all_params_for_ml)
-stop_timer("Dynamic Energy Model 1 Sample")
-
-start_timer("Latency Model 1 Sample")
-l_model.predict(all_params_for_ml)
-stop_timer("Latency Model 1 Sample")
-
-start_timer("Static Energy Model 1 Sample")
-e_static_model.predict(all_params_for_ml)
-stop_timer("Static Energy Model 1 Sample")
-
 # ----------
-start_timer("Initialize Algorithm to zeros")
+print("Initialize Algorithm")
+#start_timer("Initialize Algorithm to zeros")
 
 # Set up the guy to know what the neuron parameters are :O
 neuron_params = np.zeros((number_of_neurons, NUM_NEURON_PARAMS))
@@ -315,9 +300,10 @@ spike_events_energy_per_time_step = defaultdict(list)
 spike_events_latency_per_time_step = defaultdict(list)
 spike_events_spike_or_not_per_time_step = defaultdict(list)
 
-stop_timer("Initialize Algorithm to zeros")
+#stop_timer("Initialize Algorithm to zeros")
 
 # ---------------
+print("Start Algorithm Run")
 start_timer("Algorithm Run")
 for time_step_id in range(num_time_steps):
     # Batch all the input spikes together
@@ -475,8 +461,9 @@ stop_timer("Algorithm Run")
 
 # --------------
 # Do Post Processing :)
+print("Start Post Processing for Calculation of Error")
 # Print out all the timings aggregated
-pretty_print_loop_timers()
+#pretty_print_loop_timers()
 
 # Post Processing to make sense of everything
 energy_per_neuron_event = defaultdict(list)
@@ -577,10 +564,10 @@ total_neuron_energies = np.sum(predicted_energy)
 spice_results_together = np.vstack(spice_results)
 
 # Get statistics per timestep :)
-latency_statistics = np.zeros((num_time_steps, 4))
-energy_statistics = np.zeros((num_time_steps, 4))
-static_energy_statistics = np.zeros((num_time_steps, 4))
-neuron_state_statistics = np.zeros((num_time_steps, 4))
+latency_statistics = np.zeros((num_time_steps, 3))
+energy_statistics = np.zeros((num_time_steps, 3))
+static_energy_statistics = np.zeros((num_time_steps, 3))
+neuron_state_statistics = np.zeros((num_time_steps, 3))
 
 for time_step_id in range(num_time_steps):
 
@@ -603,10 +590,10 @@ for time_step_id in range(num_time_steps):
         neuron_state_statistics[time_step_id, :] = regression_metrics_no_array(np.array(real_guys["Cap_Voltage_At_Output_End"]), np.array(predicted_guys["Cap_Voltage_At_Output_End"]))
 
     else:
-        static_energy_statistics[time_step_id, :] = (0,0,0,0)
-        energy_statistics[time_step_id, :] = (0,0,0,0)
-        latency_statistics[time_step_id, :] = (0,0,0,0)
-        neuron_state_statistics[time_step_id, :] = (0,0,0,0)
+        static_energy_statistics[time_step_id, :] = (0,0,0)
+        energy_statistics[time_step_id, :] = (0,0,0)
+        latency_statistics[time_step_id, :] = (0,0,0)
+        neuron_state_statistics[time_step_id, :] = (0,0,0)
 
 # -------------
 # Figure save make directory
@@ -632,13 +619,13 @@ plt.ylabel("Normalized MSE", fontsize=9)
 plt.legend(['Dynamic Energy', "Static Energy","Latency", "State"],ncol=4, prop={'size': 8},loc='lower center', framealpha=0.5)
 plt.tight_layout()
 if SAVE_FIGS:
-    figure_name = "MSE_over_time" + today
+    figure_name = "ml_inference_wrapper_MSE_over_time" + today
     plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
 
 # Get Metrics
 # For regressors
 regressor_table = PrettyTable()
-regressor_table.field_names = ["Value", "MSE", "MAE", "MAPE", "R-Squared", "Average Error"]
+regressor_table.field_names = ["Value", "MSE", "MAE", "MAPE"]
 
 # Get bitmask of just the spikes for energy and latency :)
 bit_mask = (np.array(spice_results_together[:,0]) ==1)
@@ -660,7 +647,7 @@ if ORACLE:
 else:
     tag = "predicted"
 
-write_prettytable(os.path.join('../results', f"batch_transient_analysis_regressor_table_{tag}.csv"), regressor_table)
+write_prettytable(os.path.join('../results', f"ml_inference_wrapper_regressor_{tag}.csv"), regressor_table)
 
 # For classifiers
 classifier_table = PrettyTable()
@@ -670,14 +657,14 @@ metrics = classification_metrics(spice_results_together[:, 0], predicted_spike_o
 classifier_table.add_row(["Output Spike or Not"]+metrics)
 
 print(classifier_table)
-write_prettytable(os.path.join('../results', f"batch_transient_analysis_classifier_table_{tag}.csv"), classifier_table)
+write_prettytable(os.path.join('../results', f"ml_inference_wrapper_classifier_{tag}.csv"), classifier_table)
 
 # ----
 print(f"Total Predicted Energy: {total_neuron_energies}")
 total_real_energies = np.sum(spice_results_together[:,1])
 print(f"Total SPICE Energy: {total_real_energies}")
 average_error = np.abs(total_real_energies - total_neuron_energies) /total_real_energies * 100
-print(f"Average Error: {average_error:2f}")
+print(f"Average Energy Error: {average_error:2f}")
 
 if SHOW_FIGS:
     plt.show(block=False)

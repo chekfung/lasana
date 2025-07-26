@@ -20,12 +20,10 @@ figure_counter = 0
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # --------------------------------------
-# Hyperparameters # FIXME: NEED TO FIX THIS GUY UP :)
-RUN_NAME = 'spiking_20000_runs_4_10'
-MODEL_RUN_NAME = "larger_weight_range"
-CSV_NAME = 'test1.csv'
-SHOW_FIGS = False
-SAVE_FIGS = False
+# Hyperparameters 
+RUN_NAME = 'spiking_20000_runs'
+MODEL_RUN_NAME = "spiking_neuron_run"
+CSV_NAME = 'spiking_neuron_dataset.csv'
 LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
 NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
 LIST_OF_COLUMNS_X += NEURON_PARAMS
@@ -38,8 +36,8 @@ num_neurons = [10, 100, 1000, 3000, 5000, 20000]
 # --------------------------------------
 
 # Load dataset that we will use beforehand
-dataset_csv_filepath = os.path.join('logs', RUN_NAME, CSV_NAME)
-model_filepath = os.path.join('logs', MODEL_RUN_NAME, 'ml_models')
+dataset_csv_filepath = os.path.join('../data', RUN_NAME, CSV_NAME)
+model_filepath = os.path.join('../data', MODEL_RUN_NAME, 'ml_models')
 spike_data_df = pd.read_csv(dataset_csv_filepath)
 
 # Fill in NA
