@@ -15,7 +15,6 @@ __pycache__/
 logs/*.sp
 logs/
 *.npy
-*/data/*
 spice_fully_connected/*.raw
 catboost_info/
 test_cadence_flow/analog_lif_neuron_playground.raw/

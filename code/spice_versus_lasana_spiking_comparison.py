@@ -1,0 +1,298 @@
+import pandas as pd
+import os
+import numpy as np 
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import confusion_matrix, mean_absolute_percentage_error
+from create_spikes import *
+figure_counter = 0
+
+# Function to calculate percentage error between spike counts
+def calculate_percentage_error(spice_spikes, lasana_spikes):
+    """
+    Calculate the percentage error between spice and lasana spike counts.
+    
+    Parameters:
+    - spice_spikes: Spike count for spice dataset.
+    - lasana_spikes: Spike count for lasana dataset.
+    
+    Returns:
+    - Percentage error as a float. If lasana_spikes is zero, returns 100% error.
+    """
+    if lasana_spikes == 0:
+        return 0  # If lasana_spikes is zero, we assume 100% error (to avoid division by zero)
+    return abs(spice_spikes - lasana_spikes) / lasana_spikes * 100
+
+def generate_fully_connected_spike_train(layer_num_neurons, NUMBER_OF_TIMESTEPS_PER_INFERENCE, spike_data_df, weights, WEIGHT_SCALING, INPUT_SCALING):
+    layer1_spiketrain = np.zeros((NUMBER_OF_TIMESTEPS_PER_INFERENCE, layer_num_neurons))
+
+    # Provides per timestep dict of which neurons spiked :)
+    spikes_per_timestep = spike_data_df.groupby('Digital_Time_Step')['Neuron_Num'].apply(list).to_dict()
+
+    for t in spikes_per_timestep:
+        # Go through each timestep and determine what maps to what
+        neuron_ids = spikes_per_timestep[t]
+
+        for id in neuron_ids:
+            # Go through each neuron that spiked and add
+            layer1_spiketrain[t,:] += (weights[:,id] * WEIGHT_SCALING)
+        
+    # Apply Input Scaling :)
+    layer1_spiketrain = layer1_spiketrain * INPUT_SCALING
+    return layer1_spiketrain
+
+def create_spike_matrix(df, max_neuron_num, max_digital_timestep):
+    # Filter the DataFrame for "Event_Type" == 'in-out'
+    df_filtered = df[df['Event_Type'] == 'in-out']
+    
+    # Initialize a NumPy array with zeros
+    spike_matrix = np.zeros((max_digital_timestep, max_neuron_num))
+    
+    # Use NumPy indexing to fill in the spike_matrix directly from the filtered DataFrame
+    spike_matrix[df_filtered['Digital_Time_Step'], df_filtered['Neuron_Num']] = df_filtered['Output_Spike']
+    
+    return spike_matrix
+
+def plot_spike_difference(spike_matrix_1, spike_matrix_2, name):
+    # Step 1: Compute the difference between the two spike matrices
+    global figure_counter
+
+    spike_diff = spike_matrix_1 - spike_matrix_2
+    
+    # Step 2: Create the raster plot
+    plt.figure(figure_counter)
+    figure_counter+=1
+    plt.imshow(spike_diff.T, aspect='auto', cmap='coolwarm', origin='lower', interpolation='nearest')
+    
+    # Add labels and a color bar
+    plt.colorbar(label='Spike Difference')
+    plt.xlabel('Digital Timestep')
+    plt.ylabel('Neuron Number')
+    plt.title(f'Raster Plot of Spike Matrix Difference: {name}')
+
+    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_spike_diff.png', format='png')
+    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_spike_diff.pdf', format='pdf')
+    
+import numpy as np
+
+def calculate_spike_metrics(true_spikes, predicted_spikes, name):
+    """
+    Calculate spike accuracy, precision, recall, and F1-score by comparing two spike matrices.
+
+    Parameters:
+    - true_spikes: numpy array representing the true spike train (0 or 1)
+    - predicted_spikes: numpy array representing the predicted spike train (0 or 1)
+
+    Returns:
+    - A dictionary containing accuracy, precision, recall, and F1 score.
+    """
+    # Ensure the matrices have the same shape
+    assert true_spikes.shape == predicted_spikes.shape, "Shape mismatch between true and predicted spike matrices"
+    
+    # Calculate True Positives, False Positives, False Negatives, and True Negatives
+    TP = np.sum((true_spikes == 1) & (predicted_spikes == 1))
+    FP = np.sum((true_spikes == 0) & (predicted_spikes == 1))
+    FN = np.sum((true_spikes == 1) & (predicted_spikes == 0))
+    TN = np.sum((true_spikes == 0) & (predicted_spikes == 0))
+    
+    # Calculate Accuracy
+    accuracy = (TP + TN) / (TP + FP + FN + TN)
+    
+    # Calculate Precision
+    precision = TP / (TP + FP) if (TP + FP) != 0 else 0
+    
+    # Calculate Recall
+    recall = TP / (TP + FN) if (TP + FN) != 0 else 0
+    
+    # Calculate F1 Score
+    f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
+
+    # Confusion Matrix
+    labels = ['spike', 'no-spike']
+    cm = confusion_matrix(true_spikes.flatten(), predicted_spikes.flatten())
+
+    global figure_counter
+    plt.figure(figure_counter)
+    figure_counter+=1
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    plt.title('Confusion Matrix')
+
+    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_confusion_matrix.png', format='png')
+    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_confusion_matrix.pdf', format='pdf')
+
+    # Return all metrics as a dictionary
+    return {
+        'accuracy': accuracy,
+        'precision': precision,
+        'recall': recall,
+        'f1_score': f1_score
+    }
+
+# TODO: Fix this
+RUN_FOLDER = "D:/spiking_mnist_runs/"
+lasana_runs = os.path.join(RUN_FOLDER, 'lasana/4_11_run_lasana_logs')
+spice_runs = os.path.join(RUN_FOLDER, 'spiking_spice_mnist')
+
+# This is just
+num_layers = 3
+layer_sizes = [784, 128, 10]
+num_timesteps = 100
+num_images = 10000
+image_offset = 0
+lasana_str = '{}_spike_info_layer{}.csv'
+spice_str = 'img{}_layer{}_events_dataset.csv'
+columns_of_interest = ["Neuron_Num","Digital_Time_Step","Event_Type", 'Weight', "Output_Spike", 'Energy', "Latency", "Cap_Voltage_At_Input_Start","Cap_Voltage_At_Output_End"]
+
+energy_errs = []
+latency_errs = []
+latency_mape = []
+dynamic_energy_mape = []
+
+for k in range(num_images):
+    print(f"image {k}")
+    image_id = k + image_offset
+
+    lasana_dfs = {}
+    spice_dfs = {}
+
+    for i in range(num_layers):
+        # Load and scale SPICE data
+        raw_spice_df = pd.read_csv(os.path.join(spice_runs, spice_str.format(image_id, i)))
+        raw_spice_df['Energy'] = raw_spice_df['Energy'] * 1e12  # to pJ
+        raw_spice_df['Latency'] = raw_spice_df['Latency'] * 1e9  # to ns
+        raw_spice_df['Output_Spike'] = (raw_spice_df['Event_Type'] == 'in-out').astype(int)
+        spice_dfs[i] = raw_spice_df[columns_of_interest]
+        
+        # Load and scale Lasana data
+        raw_lasana_df = pd.read_csv(os.path.join(lasana_runs, lasana_str.format(image_id, i)))
+        raw_lasana_df['Energy'] = raw_lasana_df['Energy'] * 1e12  # to pJ
+        raw_lasana_df['Latency'] = raw_lasana_df['Latency'] * 1e9  # to ns
+        lasana_dfs[i] = raw_lasana_df[columns_of_interest]
+
+    total_energy_lasana = 0
+    total_energy_spice = 0
+
+    # ENERGY ERROR
+    # Loop over each layer
+    for i in range(num_layers):
+        spice_layer_sum = spice_dfs[i]["Energy"].sum()
+        lasana_layer_sum = lasana_dfs[i]["Energy"].sum()
+        
+        # Get the energy for the current layer in both spice and lasana
+        total_energy_spice += spice_layer_sum
+        total_energy_lasana += lasana_layer_sum
+
+    # Print Output
+    total_energy_err = calculate_percentage_error(total_energy_spice, total_energy_lasana)
+    print(f"Total Energy Percentage Error: {total_energy_err}")
+    energy_errs.append(total_energy_err)
+
+    total_latency_lasana = 0
+    total_latency_spice = 0
+
+    # LATENCY ERROR
+    # Loop over each layer
+    for i in range(num_layers):
+        # Initialize counters for the current layer, filtered to 'in-out' events
+        spice_layer_sum = spice_dfs[i]["Latency"].sum()
+        lasana_layer_sum = lasana_dfs[i]["Latency"].sum()
+
+        total_latency_spice += spice_layer_sum
+        total_latency_lasana += lasana_layer_sum
+
+    # Print Output
+    total_latency_err = calculate_percentage_error(total_latency_spice, total_latency_lasana)
+    print(f"Total Latency Percentage Error: {total_latency_err}")
+    latency_errs.append(total_latency_err)
+
+    # Latency MAPE
+    matched_spice_latencies = []
+    matched_lasana_latencies = []
+
+    for i in range(num_layers):
+        # Filter SPICE for 'in-out' events and Output_Spike == 1
+        spice_filtered = spice_dfs[i][
+            (spice_dfs[i]['Event_Type'] == 'in-out') & (spice_dfs[i]['Output_Spike'] == 1)
+        ]
+
+        # Filter Lasana for Output_Spike == 1
+        lasana_filtered = lasana_dfs[i][
+            lasana_dfs[i]['Output_Spike'] == 1
+        ]
+
+        # Rename latency columns to distinguish them after merge
+        spice_filtered = spice_filtered.rename(columns={'Latency': 'Latency_spice'})
+        lasana_filtered = lasana_filtered.rename(columns={'Latency': 'Latency_lasana'})
+        
+        # Merge on Neuron_Num and Timestep
+        merged = pd.merge(
+            spice_filtered[['Neuron_Num', "Digital_Time_Step", 'Latency_spice']],
+            lasana_filtered[['Neuron_Num', "Digital_Time_Step", 'Latency_lasana']],
+            on=['Neuron_Num', "Digital_Time_Step"],
+            how='inner'
+        )
+
+        spice_arr = np.array(merged['Latency_spice'].tolist())
+        lasana_arr = np.array(merged['Latency_lasana'].tolist())
+        merged['Error'] = np.abs((merged['Latency_lasana'] - merged['Latency_spice']) / merged['Latency_spice'])
+
+        # Append to master lists
+        matched_spice_latencies.extend(merged['Latency_spice'].tolist())
+        matched_lasana_latencies.extend(merged['Latency_lasana'].tolist())
+
+    spice_arr = np.array(matched_spice_latencies)
+    lasana_arr = np.array(matched_lasana_latencies)
+
+    nonzero_mask = spice_arr != 0
+    mape = mean_absolute_percentage_error(lasana_arr[nonzero_mask ], spice_arr[nonzero_mask]) * 100
+    print(f"Latency MAPE: {mape}%")
+    latency_mape.append(mape)
+
+    # Dynamic Energy MAPE
+    matched_spice_energies = []
+    matched_lasana_energies = []
+
+    for i in range(num_layers):
+        # Filter SPICE for 'in-out' events and Output_Spike == 1
+        spice_filtered = spice_dfs[i][
+            (spice_dfs[i]['Event_Type'] == 'in-out')
+        ]
+
+        lasana_filtered = lasana_dfs[i]
+
+        # Rename latency columns to distinguish them after merge
+        spice_filtered = spice_filtered.rename(columns={'Energy': 'Energy_spice'})
+        lasana_filtered = lasana_filtered.rename(columns={'Energy': 'Energy_lasana'})
+        
+        # Merge on Neuron_Num and Timestep
+        merged = pd.merge(
+            spice_filtered[['Neuron_Num', "Digital_Time_Step", 'Energy_spice']],
+            lasana_filtered[['Neuron_Num', "Digital_Time_Step", 'Energy_lasana']],
+            on=['Neuron_Num', "Digital_Time_Step"],
+            how='inner'
+        )
+
+        spice_arr = np.array(merged['Energy_spice'].tolist())
+        lasana_arr = np.array(merged['Energy_lasana'].tolist())
+        merged['Error'] = np.abs((merged['Energy_lasana'] - merged['Energy_spice']) / merged['Energy_spice'])
+
+        # Append to master lists
+        matched_spice_latencies.extend(merged['Energy_spice'].tolist())
+        matched_lasana_latencies.extend(merged['Energy_lasana'].tolist())
+
+    spice_arr = np.array(matched_spice_latencies)
+    lasana_arr = np.array(matched_lasana_latencies)
+
+    nonzero_mask = spice_arr != 0
+    mape = mean_absolute_percentage_error(lasana_arr[nonzero_mask ], spice_arr[nonzero_mask]) * 100
+    print(f"Dynamic Energy MAPE: {mape}%")
+    dynamic_energy_mape.append(mape)
+
+# TODO: Maybe save this output in a different way. Literally could just send to a text file in the results so that they have it.
+print(f"Num Images: {num_images}")
+print(f"Average Energy Error: {sum(energy_errs) / len(energy_errs)}")
+print(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)} ")
+print(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}")
+print(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(dynamic_energy_mape) / len(dynamic_energy_mape)}")

@@ -159,7 +159,7 @@ def classification_metrics(y_true, y_pred, decimal_places=7):
 # Load in the Test Dataset that will be run
 
 # Find full dataset and put into dataframe
-figure_src_directory = os.path.join('results')
+figure_src_directory = os.path.join('../results')
 dataset_csv_filepath = os.path.join('../data', RUN_NAME, CSV_NAME)
 model_filepath = os.path.join('../data', MODEL_RUN_NAME, 'ml_models')
 
@@ -660,7 +660,7 @@ if ORACLE:
 else:
     tag = "predicted"
 
-write_prettytable(os.path.join('results', f"batch_transient_analysis_regressor_table_{tag}.csv"), regressor_table)
+write_prettytable(os.path.join('../results', f"batch_transient_analysis_regressor_table_{tag}.csv"), regressor_table)
 
 # For classifiers
 classifier_table = PrettyTable()
@@ -670,7 +670,7 @@ metrics = classification_metrics(spice_results_together[:, 0], predicted_spike_o
 classifier_table.add_row(["Output Spike or Not"]+metrics)
 
 print(classifier_table)
-write_prettytable(os.path.join('results', f"batch_transient_analysis_classifier_table_{tag}.csv"), classifier_table)
+write_prettytable(os.path.join('../results', f"batch_transient_analysis_classifier_table_{tag}.csv"), classifier_table)
 
 # ----
 print(f"Total Predicted Energy: {total_neuron_energies}")
