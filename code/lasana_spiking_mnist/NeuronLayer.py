@@ -274,4 +274,4 @@ class NeuronLayer:
         mega_df = pd.concat(all_guys)
         df_sorted = mega_df.sort_values(by=['Neuron_Num', 'Digital_Time_Step'])
 
-        df_sorted.to_csv(f"logs/{image_num}_spike_info_{self.name}.csv", index=False)
+        df_sorted.to_csv(f"../../data/lasana_spiking_mnist_logs/{image_num}_spike_info_{self.name}.csv", index=False)

@@ -229,21 +229,7 @@ stop_timer("Generate Time Step DataFrame Input Spikes")
 # ------------
 start_timer("Load Models")
 
-# Load in Catboost Models
-e_static_model = CatBoostRegressor()
-e_static_model.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_7.cbm'))
 
-e_model = CatBoostRegressor()
-e_model.load_model(os.path.join(model_filepath, 'catboost_dynamic_energy_11_7.cbm'))
-
-l_model = CatBoostRegressor()
-l_model.load_model(os.path.join(model_filepath, 'catboost_latency_11_7.cbm'))
-
-neuron_state_model = CatBoostRegressor()
-neuron_state_model.load_model(os.path.join(model_filepath, 'catboost_neuron_state_11_7.cbm'))
-
-spike_or_not_model = CatBoostClassifier()
-spike_or_not_model.load_model(os.path.join(model_filepath, 'catboost_spike_or_not_11_7.cbm'))
 
 if LOAD_IN_MLP_MODELS:
     print("Load MLP Models")
@@ -265,6 +251,22 @@ if LOAD_IN_MLP_MODELS:
     l_model = joblib.load(os.path.join(model_filepath, 'mlp_latency_11_8.joblib'))
     neuron_state_model = joblib.load(os.path.join(model_filepath, "mlp_neuron_state_11_8.joblib"))
     spike_or_not_model = joblib.load(os.path.join(model_filepath, "mlp_spike_or_not_11_8.joblib"))
+else:
+    # Load in Catboost Models
+    e_static_model = CatBoostRegressor()
+    e_static_model.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_7.cbm'))
+
+    e_model = CatBoostRegressor()
+    e_model.load_model(os.path.join(model_filepath, 'catboost_dynamic_energy_11_7.cbm'))
+
+    l_model = CatBoostRegressor()
+    l_model.load_model(os.path.join(model_filepath, 'catboost_latency_11_7.cbm'))
+
+    neuron_state_model = CatBoostRegressor()
+    neuron_state_model.load_model(os.path.join(model_filepath, 'catboost_neuron_state_11_7.cbm'))
+
+    spike_or_not_model = CatBoostClassifier()
+    spike_or_not_model.load_model(os.path.join(model_filepath, 'catboost_spike_or_not_11_7.cbm'))
 
 print("ML Models Loaded In")
 stop_timer("Load Models")

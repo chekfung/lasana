@@ -18,14 +18,14 @@ random.seed(42)
 testnum=10000       #Number of input test cases to run
 testnum_per_batch=10 #Number of test cases in a single batch, testnum should be divisible by this number
 firstimage=0 #start the test inputs from this image\
-csv_name = '5_12_2025_full_run_lasana_pseudo_neuron_8_bit.csv'      # TODO: Change this
-csv_folder = 'separated_csvs_5_12_25_lasana_pseudo_neuron_8_bit'
+csv_name = '5_12_2025_full_run_lasana_pseudo_neuron_8_bit.csv'     # Refers to top CSV for high level acc and energy # TODO: Change this
+csv_folder = 'separated_csvs_5_12_25_lasana_pseudo_neuron_8_bit'   # Per analog block energy, latency, etc. logs
 
 USE_QUANTIZATION = True
 DAC_BITS = 8
 
 #list of inputs start
-data_dir=os.path.join('../../data/', 'imac_mnist_model') #The directory where data files are located
+data_dir=os.path.join('../../data', 'imac_mnist_model') #The directory where data files are located (both the weights, biases, and dataset inputs and labels)
 dataset_file='test_data.csv' #Name of the dataset file
 label_file='test_labels.csv' #Name of the label file
 
@@ -275,8 +275,8 @@ def combine_horizontal_partition_outputs(outputs, layer_num, next_layer_neurons,
 
 # -----------
 # Load in 10 diff ML Models
-MODEL_RUN_NAME = "mac_unti_diff_10_pcm_mnist_realistic_op_amp_add_binary" # TODO: Change this
-model_filepath = os.path.join('../logs', MODEL_RUN_NAME, 'ml_models')
+MODEL_RUN_NAME = "mac_unit_diff_10_run" 
+model_filepath = os.path.join('../../data', MODEL_RUN_NAME, 'ml_models')
 e_static_model_10 = CatBoostRegressor()
 e_static_model_10.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_9.cbm'))
 
@@ -290,8 +290,8 @@ behavior_model_10 = CatBoostRegressor()
 behavior_model_10.load_model(os.path.join(model_filepath, 'mac_catboost_output_11_9.cbm'))
 
 # Load in 30 diff ML Models
-MODEL_RUN_NAME = "mac_unti_diff_30_pcm_mnist_realistic_op_amp_add_binary" # TODO: Change this
-model_filepath = os.path.join('../logs', MODEL_RUN_NAME, 'ml_models')
+MODEL_RUN_NAME = "mac_unit_diff_30_run" 
+model_filepath = os.path.join('../../data', MODEL_RUN_NAME, 'ml_models')
 e_static_model_30 = CatBoostRegressor()
 e_static_model_30.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_9.cbm'))
 

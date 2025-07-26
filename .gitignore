@@ -24,6 +24,7 @@ systemverilog/test/xcelium.d/
 /data/MNIST/
 /data/*run*
 /results/
+/data/*logs*
 
 
 # C extensions

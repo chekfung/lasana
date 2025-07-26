@@ -48,22 +48,6 @@ spike_data_df['Output_Spike'] = spike_data_df['Event_Type'].apply(lambda x: 1 if
 spike_data_df['Latency'] = spike_data_df['Latency'] * 10**9
 spike_data_df['Energy'] = spike_data_df['Energy'] * 10**12
 
-# Load in Catboost Models
-e_static_model = CatBoostRegressor()
-e_static_model.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_7.cbm'))
-
-e_model = CatBoostRegressor()
-e_model.load_model(os.path.join(model_filepath, 'catboost_dynamic_energy_11_7.cbm'))
-
-l_model = CatBoostRegressor()
-l_model.load_model(os.path.join(model_filepath, 'catboost_latency_11_7.cbm'))
-
-neuron_state_model = CatBoostRegressor()
-neuron_state_model.load_model(os.path.join(model_filepath, 'catboost_neuron_state_11_7.cbm'))
-
-spike_or_not_model = CatBoostClassifier()
-spike_or_not_model.load_model(os.path.join(model_filepath, 'catboost_spike_or_not_11_7.cbm'))
-
 if LOAD_IN_MLP_MODELS:
     print("Load MLP Models")
     # Load in the std scaler
@@ -84,6 +68,22 @@ if LOAD_IN_MLP_MODELS:
     l_model = joblib.load(os.path.join(model_filepath, 'mlp_latency_11_8.joblib'))
     neuron_state_model = joblib.load(os.path.join(model_filepath, "mlp_neuron_state_11_8.joblib"))
     spike_or_not_model = joblib.load(os.path.join(model_filepath, "mlp_spike_or_not_11_8.joblib"))
+else:
+    # Load in Catboost Models
+    e_static_model = CatBoostRegressor()
+    e_static_model.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_7.cbm'))
+
+    e_model = CatBoostRegressor()
+    e_model.load_model(os.path.join(model_filepath, 'catboost_dynamic_energy_11_7.cbm'))
+
+    l_model = CatBoostRegressor()
+    l_model.load_model(os.path.join(model_filepath, 'catboost_latency_11_7.cbm'))
+
+    neuron_state_model = CatBoostRegressor()
+    neuron_state_model.load_model(os.path.join(model_filepath, 'catboost_neuron_state_11_7.cbm'))
+
+    spike_or_not_model = CatBoostClassifier()
+    spike_or_not_model.load_model(os.path.join(model_filepath, 'catboost_spike_or_not_11_7.cbm'))
 
 # --------------------------------------------------
 # Create pretty table to export easily later

@@ -21,14 +21,14 @@ BATCH_SIZE = 1                             # Number of inferences to run per sim
 NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100     # Number of timesteps for each input image
 PYTORCH_MODEL_FILE = '../../data/spiking_mnist_model.pt'
 PLOT_THINGS = False
-NUM_INFERENCES = 10000
+NUM_INFERENCES = 100
 SAVE_LOGS = True
 WEIGHT_SCALING = 1                         # Scaling of weights (to account for leak) 
 INPUT_SCALING = 2                          # Scaling of inputs between layers (note that input scaling implicitly affects weight scaling since weight scaling is applied first, then input scaling)
 
 # Neuron Hyperparameters
-LASANA_RUN_NAME = 'larger_weight_range'#'explicit_edge_case_increase_spk_smaller_knob_range_3_10_25'#'explicit_edge_case_review_0.1_3_10_2025'#'larger_width_reset_2_6_2025'#'leak_works_1_29'
-LASANA_MODELS_FD = os.path.join("../", 'logs', LASANA_RUN_NAME, 'ml_models')
+LASANA_RUN_NAME = 'spiking_neuron_run'#'explicit_edge_case_increase_spk_smaller_knob_range_3_10_25'#'explicit_edge_case_review_0.1_3_10_2025'#'larger_width_reset_2_6_2025'#'leak_works_1_29'
+LASANA_MODELS_FD = os.path.join("../../data", LASANA_RUN_NAME, 'ml_models')
 LOAD_MLP_MODELS = True                     # Alternative is to load in CatBoost models :)
 DT = 5*10**-9       # Digital backend timestep
 
@@ -60,6 +60,15 @@ def poisson_spike_train(image, timesteps):
 # --------------------------------------
 ## - Start of Script -
 # Load in MNIST Dataset from 0 to 1
+
+# Make logs folder if does not exist
+lasana_log_folder = os.path.join('../../data', "lasana_spiking_mnist_logs")
+
+if SAVE_LOGS:
+    # Create ML Library
+    if not os.path.exists(lasana_log_folder):
+        os.makedirs(lasana_log_folder)
+
 transform = transforms.Compose([transforms.ToTensor()])
 testset = torchvision.datasets.MNIST(root='../../data', train=False, download=True, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False)
@@ -70,23 +79,6 @@ mnist_model = torch.load(PYTORCH_MODEL_FILE,pickle_module=dill,map_location=torc
 model_weights = {}      # keys are "fc1.weight", and fc2.weight
 for param_name, param in mnist_model.named_parameters():
     model_weights[param_name] = param.detach().numpy()
-
-# Load in CatBoost Models from LASANA
-e_static_model = CatBoostRegressor()
-e_static_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_static_energy_11_7.cbm'))
-
-e_model = CatBoostRegressor()
-e_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_dynamic_energy_11_7.cbm'))
-
-l_model = CatBoostRegressor()
-l_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_latency_11_7.cbm'))
-
-neuron_state_model = CatBoostRegressor()
-neuron_state_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_neuron_state_11_7.cbm'))
-
-spike_or_not_model = CatBoostClassifier()
-spike_or_not_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_spike_or_not_11_7.cbm'))
-std_scaler = None
 
 if LOAD_MLP_MODELS:
     print("Load MLP Models")
@@ -108,6 +100,23 @@ if LOAD_MLP_MODELS:
     l_model = joblib.load(os.path.join(LASANA_MODELS_FD, 'mlp_latency_11_8.joblib'))
     neuron_state_model = joblib.load(os.path.join(LASANA_MODELS_FD, "mlp_neuron_state_11_8.joblib"))
     spike_or_not_model = joblib.load(os.path.join(LASANA_MODELS_FD, "mlp_spike_or_not_11_8.joblib"))
+else:
+    # Load in CatBoost Models from LASANA
+    e_static_model = CatBoostRegressor()
+    e_static_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_static_energy_11_7.cbm'))
+
+    e_model = CatBoostRegressor()
+    e_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_dynamic_energy_11_7.cbm'))
+
+    l_model = CatBoostRegressor()
+    l_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_latency_11_7.cbm'))
+
+    neuron_state_model = CatBoostRegressor()
+    neuron_state_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_neuron_state_11_7.cbm'))
+
+    spike_or_not_model = CatBoostClassifier()
+    spike_or_not_model.load_model(os.path.join(LASANA_MODELS_FD, 'catboost_spike_or_not_11_7.cbm'))
+    std_scaler = None
 
 print("ML Models Loaded In")
 
