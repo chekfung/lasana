@@ -48,7 +48,7 @@ if __name__ == "__main__":
     CONFIG = 'config_spiking_neuron'
 
     RUN_MAC_UNIT = True
-    CONFIG = 'config_pcm_crossbar_gain_10'
+    CONFIG = 'config_pcm_crossbar_gain_30'
 
     if RUN_MAC_UNIT:
         print(f"Running the following files: [{python_files_mac_unit}]")
