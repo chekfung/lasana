@@ -1,8 +1,9 @@
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 import pandas as pd
 import os 
-import seaborn as sns
 from matplotlib import cm
 from matplotlib.ticker import MultipleLocator
 import time

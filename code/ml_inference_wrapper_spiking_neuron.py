@@ -4,7 +4,8 @@ from prettytable import PrettyTable
 from datetime import date    
 import time
 import numpy as np
-import seaborn as sns
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 import pandas as pd
 pd.options.mode.chained_assignment = None  

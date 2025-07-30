@@ -1,8 +1,9 @@
 import pandas as pd
 import os
 import numpy as np 
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.metrics import confusion_matrix, mean_absolute_percentage_error
 from create_spikes import *
 figure_counter = 0
@@ -22,113 +23,6 @@ def calculate_percentage_error(spice_spikes, lasana_spikes):
     if lasana_spikes == 0:
         return 0  # If lasana_spikes is zero, we assume 100% error (to avoid division by zero)
     return abs(spice_spikes - lasana_spikes) / lasana_spikes * 100
-
-def generate_fully_connected_spike_train(layer_num_neurons, NUMBER_OF_TIMESTEPS_PER_INFERENCE, spike_data_df, weights, WEIGHT_SCALING, INPUT_SCALING):
-    layer1_spiketrain = np.zeros((NUMBER_OF_TIMESTEPS_PER_INFERENCE, layer_num_neurons))
-
-    # Provides per timestep dict of which neurons spiked :)
-    spikes_per_timestep = spike_data_df.groupby('Digital_Time_Step')['Neuron_Num'].apply(list).to_dict()
-
-    for t in spikes_per_timestep:
-        # Go through each timestep and determine what maps to what
-        neuron_ids = spikes_per_timestep[t]
-
-        for id in neuron_ids:
-            # Go through each neuron that spiked and add
-            layer1_spiketrain[t,:] += (weights[:,id] * WEIGHT_SCALING)
-        
-    # Apply Input Scaling :)
-    layer1_spiketrain = layer1_spiketrain * INPUT_SCALING
-    return layer1_spiketrain
-
-def create_spike_matrix(df, max_neuron_num, max_digital_timestep):
-    # Filter the DataFrame for "Event_Type" == 'in-out'
-    df_filtered = df[df['Event_Type'] == 'in-out']
-    
-    # Initialize a NumPy array with zeros
-    spike_matrix = np.zeros((max_digital_timestep, max_neuron_num))
-    
-    # Use NumPy indexing to fill in the spike_matrix directly from the filtered DataFrame
-    spike_matrix[df_filtered['Digital_Time_Step'], df_filtered['Neuron_Num']] = df_filtered['Output_Spike']
-    
-    return spike_matrix
-
-def plot_spike_difference(spike_matrix_1, spike_matrix_2, name):
-    # Step 1: Compute the difference between the two spike matrices
-    global figure_counter
-
-    spike_diff = spike_matrix_1 - spike_matrix_2
-    
-    # Step 2: Create the raster plot
-    plt.figure(figure_counter)
-    figure_counter+=1
-    plt.imshow(spike_diff.T, aspect='auto', cmap='coolwarm', origin='lower', interpolation='nearest')
-    
-    # Add labels and a color bar
-    plt.colorbar(label='Spike Difference')
-    plt.xlabel('Digital Timestep')
-    plt.ylabel('Neuron Number')
-    plt.title(f'Raster Plot of Spike Matrix Difference: {name}')
-
-    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_spike_diff.png', format='png')
-    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_spike_diff.pdf', format='pdf')
-    
-import numpy as np
-
-def calculate_spike_metrics(true_spikes, predicted_spikes, name):
-    """
-    Calculate spike accuracy, precision, recall, and F1-score by comparing two spike matrices.
-
-    Parameters:
-    - true_spikes: numpy array representing the true spike train (0 or 1)
-    - predicted_spikes: numpy array representing the predicted spike train (0 or 1)
-
-    Returns:
-    - A dictionary containing accuracy, precision, recall, and F1 score.
-    """
-    # Ensure the matrices have the same shape
-    assert true_spikes.shape == predicted_spikes.shape, "Shape mismatch between true and predicted spike matrices"
-    
-    # Calculate True Positives, False Positives, False Negatives, and True Negatives
-    TP = np.sum((true_spikes == 1) & (predicted_spikes == 1))
-    FP = np.sum((true_spikes == 0) & (predicted_spikes == 1))
-    FN = np.sum((true_spikes == 1) & (predicted_spikes == 0))
-    TN = np.sum((true_spikes == 0) & (predicted_spikes == 0))
-    
-    # Calculate Accuracy
-    accuracy = (TP + TN) / (TP + FP + FN + TN)
-    
-    # Calculate Precision
-    precision = TP / (TP + FP) if (TP + FP) != 0 else 0
-    
-    # Calculate Recall
-    recall = TP / (TP + FN) if (TP + FN) != 0 else 0
-    
-    # Calculate F1 Score
-    f1_score = (2 * precision * recall) / (precision + recall) if (precision + recall) != 0 else 0
-
-    # Confusion Matrix
-    labels = ['spike', 'no-spike']
-    cm = confusion_matrix(true_spikes.flatten(), predicted_spikes.flatten())
-
-    global figure_counter
-    plt.figure(figure_counter)
-    figure_counter+=1
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=labels, yticklabels=labels)
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    plt.title('Confusion Matrix')
-
-    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_confusion_matrix.png', format='png')
-    plt.savefig(f'figure_src/spice_lasana_mnist_comparison_3_4_25/{name}_confusion_matrix.pdf', format='pdf')
-
-    # Return all metrics as a dictionary
-    return {
-        'accuracy': accuracy,
-        'precision': precision,
-        'recall': recall,
-        'f1_score': f1_score
-    }
 
 # TODO: Fix this
 RUN_FOLDER = "D:/spiking_mnist_runs/"

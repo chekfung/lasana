@@ -10,6 +10,8 @@ import mapWB
 import numpy as np
 import csv
 from tools_helper import *
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt 
 
 start = time.time()

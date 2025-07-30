@@ -7,6 +7,8 @@ from catboost import CatBoostRegressor, CatBoostClassifier
 import joblib
 import torchvision
 import torchvision.transforms as transforms
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 from NeuronLayer import *
 import random

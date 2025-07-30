@@ -1,5 +1,7 @@
 import pandas as pd
 import os
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 figure_counter = 0
 pd.set_option('display.max_columns', None)

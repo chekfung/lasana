@@ -1,6 +1,8 @@
 import os
 import random
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 from collections import defaultdict
 import shutil

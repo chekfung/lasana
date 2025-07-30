@@ -27,8 +27,9 @@ from scipy.stats import zscore
 from sklearn.model_selection import train_test_split
 
 # Visualization
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
-import seaborn as sns
 from matplotlib import cm
 
 # Pytorch additions :)

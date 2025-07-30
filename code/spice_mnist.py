@@ -16,6 +16,8 @@ from stat_helpers import min_max_normalization, normalize
 from scipy import signal
 from multiprocessing import Pool
 
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 figure_counter = 0
 

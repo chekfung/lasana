@@ -1,5 +1,6 @@
 import numpy as np
-import seaborn as sns
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 import pandas as pd
 import os 

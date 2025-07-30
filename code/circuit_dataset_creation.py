@@ -1,5 +1,7 @@
 # General Imports 
 import numpy as np
+import matplotlib
+matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 from stat_helpers import min_max_normalization, normalize
 import os
