@@ -12,7 +12,7 @@ from datetime import date
 today = date.today().isoformat()
 
 # Helper files with all ML model helpers :)
-from predict_ml_model_helpers import *
+from predict_ml_model_helpers import *  
 
 # Dynamically load configs :)
 import argparse
@@ -31,38 +31,43 @@ if DETERMINISTIC:
 figure_counter = 0
 
 # --------- BEGIN Preprocessing ---------
-# Create ML Library
 dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
+# Create ML Library
 if not os.path.exists(dataset_ml_models):
     os.makedirs(dataset_ml_models)
 
-run_metrics_filename = 'neuron_state_model_analysis_' + today + '.csv'
+run_metrics_filename = 'dynamic_energy_model_analysis_' + today + '.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
 dataset_csv_filepath = os.path.join('../data', RUN_NAME, DF_FILENAME)
+data_df = pd.read_csv(dataset_csv_filepath)
+data_df['Latency'] = data_df['Latency'] * 10**9     # Get into ns
+data_df['Energy'] = data_df['Energy'] * 10**12      # Get into pJ
 
-spike_data_df = pd.read_csv(dataset_csv_filepath)
-spike_data_df['Latency'] = spike_data_df['Latency'] * 10**9
-spike_data_df['Energy'] = spike_data_df['Energy'] * 10**12
+# Get the standard scaler
+std_scaler = produce_or_load_common_standard_scalar(data_df, LIST_OF_COLUMNS_X_MAC, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT, random_state=42)
 
-# Filter rows where 'Weight' is 0
-rows_with_zero_weight = spike_data_df[spike_data_df['Weight'] == 0]
+# Preprocess step
+data_df = data_df[data_df['Event_Type'] == 'in-out']
 
-# Select the two desired columns
-selected_columns = rows_with_zero_weight[["Cap_Voltage_At_Input_Start", 'Cap_Voltage_At_Output_End', "Weight", "Input_Total_Time", "V_sf", "V_adap", "V_leak", "V_rtr"]]
+# Generate input total charge histogram.
+plt.figure(figure_counter)
+figure_counter+=1
+plt.hist(data_df["Energy"], bins=100)
+plt.title("Energy")
 
-# Get the standard scaler in play :O
-std_scaler = produce_or_load_common_standard_scalar(spike_data_df, LIST_OF_COLUMNS_X, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT, random_state=42)
+if PLOT_MATPLOTLIB_FIGS:
+    plt.show()
 
-# Train Test Split
-train_df, test_df, val_df = runwise_train_test_split(spike_data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
-X_train = train_df[LIST_OF_COLUMNS_X]
-y_train = train_df[["Cap_Voltage_At_Output_End"]]
-X_test = test_df[LIST_OF_COLUMNS_X]
-y_test = test_df[["Cap_Voltage_At_Output_End"]]
-X_val = val_df[LIST_OF_COLUMNS_X]
-y_val = val_df[["Cap_Voltage_At_Output_End"]]
+# Runwise train test split :)
+train_df, test_df, val_df = runwise_train_test_split(data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
+X_train = train_df[LIST_OF_COLUMNS_X_MAC]
+y_train = train_df[["Energy"]]
+X_test = test_df[LIST_OF_COLUMNS_X_MAC]
+y_test = test_df[["Energy"]]
+X_val = val_df[LIST_OF_COLUMNS_X_MAC]
+y_val = val_df[["Energy"]]
 
 # Logging
 print("Train Run Numbers")
@@ -77,10 +82,10 @@ print("Number of Validation Samples: {}".format(X_val.shape[0]))
 print("Number of Test Samples: {}".format(X_test.shape[0]))
 
 # --------- END Preprocessing ---------
-
 # Create table to make everything easier to visualize what the hell is going on
 table = PrettyTable()
-table.field_names = ["Regressor", "Train Time", "Inference Time", "MSE", "MAE", "MAPE", "R-Squared", "Average Error", "Predicted Neuron State Total", "Real Neuron State Total"]
+table.field_names = ["Regressor", "Train Time", "Inference Time", "MSE", "MAE", "MAPE", "R-Squared", "Average Error", "Predicted Dynamic Energy Total", "Real Dynamic Energy Total"]
+
 
 # Super Baseline
 # Super baseline is to just compare the MSE with using the mean value for the training dataset and apply that to the other one.
@@ -95,25 +100,30 @@ end_time = time.time()
 test_time = end_time - start_time
 
 baseline_metrics = calculate_metrics(y_test, baseline_vec)
+
 table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained Mean Baseline")
 
 # ---------------------
 
 # Nearest-Neighbor Interpolator (Table-based method)
 table_y_pred, train_time, test_time = interpolate(X_train, X_test, X_val, y_train, y_test, y_val)
 baseline_metrics = calculate_metrics(y_test, table_y_pred)
+
 table.add_row(["NN Interpolation", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained NN Interpolation")
 
 # ----------------------
 
 # Print Linear Regression Stuff
 ols_y_pred, train_time, test_time = train_linear_regression(X_train, X_test, X_val, y_train, y_test, y_val, std_scaler)
 baseline_metrics = calculate_metrics(y_test, ols_y_pred)
+
 table.add_row(["OLS", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained OLS")
 
 # -------------------------
 # CatBoost
-# NOTE: Decision Tree Based Models do not need scaled data :O
 catboost_params = {
     'iterations': 500,
     'learning_rate': 0.1,
@@ -127,16 +137,17 @@ catboost_params = {
 if DETERMINISTIC:
     catboost_params['random_seed'] = RANDOM_SEED
 
-catboost_model_save_name = "spiking_neuron_catboost_neuron_state"
+catboost_model_save_name = "pcm_crossbar_catboost_dynamic_energy"
 cat_y_pred, train_time, test_time = run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, catboost_params, SAVE_CATBOOST_MODEL, os.path.join(dataset_ml_models, catboost_model_save_name),SAVE_CATBOOST_CPP)
 baseline_metrics = calculate_metrics(y_test, cat_y_pred)
-table.add_row(["CatBoost",  f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
-# ----------------------------
+table.add_row(["CatBoost", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained CatBoost")
 
-# Assuming X_train_scaled, X_test_scaled, y_train, y_test are your standardized train-test split data
+# ----------------------------------------
+# MLP
 hyperparameters_mlp = {
-    'hidden_layer_sizes': (100, 50),
+    'hidden_layer_sizes': (100,50),
     'activation': 'relu',
     'solver': 'adam',
     'alpha': 0.0001,
@@ -149,41 +160,45 @@ hyperparameters_mlp = {
 if DETERMINISTIC:
     hyperparameters_mlp['random_state'] = RANDOM_SEED
 
-mlp_model_save_name = "spiking_neuron_mlp_neuron_state"
+mlp_model_save_name = "pcm_crossbar_mlp_dynamic_energy_11_9"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_save_name))
 baseline_metrics = calculate_metrics(y_test, mlp_y_pred)
 table.add_row(["MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained MLP Model")
 
-# -----------------
+
+# Generate Scatter Plots
 
 plt.figure(figure_counter)
-plt.gca().set_aspect('equal', adjustable='box')
 figure_counter+=1    
-plt.scatter(mlp_y_pred, y_test, marker='x', linewidth=2)
-plt.xlabel("Predicted State (V)",fontsize=22,labelpad=10)
-plt.ylabel("SPICE State (V)",fontsize=22,labelpad=10)
-plt.gca().xaxis.set_major_locator(MultipleLocator(0.5))
-plt.gca().xaxis.set_minor_locator(MultipleLocator(0.25))
-plt.gca().yaxis.set_major_locator(MultipleLocator(0.5))
-plt.gca().yaxis.set_minor_locator(MultipleLocator(0.25))
-plt.gca().tick_params(width=2.5, length=9, which='major',pad=10)  # Set linewidth and length for major ticks
-plt.gca().tick_params(width=2, length=6, which='minor')  # Set linewidth and length for minor ticks
-plt.plot([-0.125, 1.375], [-0.125, 1.375], '--', color='black', linewidth=3.5)
-plt.xlim(-0.25,1.5)
-plt.ylim(-0.25,1.5)
+plt.scatter(cat_y_pred, y_test, marker='x', linewidth=2)
+plt.xlabel("Predicted Energy (pJ)",fontsize=22,labelpad=10)
+plt.ylabel("SPICE Energy (pJ)",fontsize=22,labelpad=10)
 plt.xticks(fontsize=22)
 plt.yticks(fontsize=22)
-
+plt.xlim(0.025,0.1)
+plt.ylim(0.025,0.1)
+plt.gca().xaxis.set_major_locator(MultipleLocator(0.025))
+plt.gca().xaxis.set_minor_locator(MultipleLocator(0.0125))
+plt.gca().yaxis.set_major_locator(MultipleLocator(0.025))
+plt.gca().yaxis.set_minor_locator(MultipleLocator(0.0125))
+plt.gca().tick_params(width=2.5, length=9, which='major',pad=10)  # Set linewidth and length for major ticks
+plt.gca().tick_params(width=2, length=6, which='minor')  # Set linewidth and length for minor ticks
+plt.plot([0.03125,0.09375], [0.03125,0.09375], '--', color='black', linewidth=3.5)
+plt.gca().set_aspect('equal', adjustable='box')
 for spine in plt.gca().spines.values():
     spine.set_linewidth(2.5)
 plt.tight_layout()
-if SAVE_FIGS:
-    plt.savefig('../results/mlp_neuron_state_model_correlation_plot_'+today+'.png', format='png', dpi=400)
 
-# -------------------------------
+if SAVE_FIGS:
+    plt.savefig('../results/pcm_crossbar_catboost_dynamic_energy_model_correlation_plot_'+today+'.png', format='png', dpi=400)
+
+# -----------
+
+# -----------------
 # Print and write the table to the file
 print(table)
 write_prettytable(metrics_output_filepath, table)
-
 if PLOT_MATPLOTLIB_FIGS:
     plt.show()
+

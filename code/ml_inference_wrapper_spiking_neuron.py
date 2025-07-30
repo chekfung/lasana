@@ -246,27 +246,27 @@ if LOAD_IN_MLP_MODELS:
         exit(1)
 
     # Note 8_5 is the fast one and accurate one: "mlp_spike_or_not_8_5.joblib"
-    e_static_model = joblib.load(os.path.join(model_filepath, 'mlp_static_energy_11_8.joblib'))
-    e_model = joblib.load(os.path.join(model_filepath, 'mlp_dynamic_energy_11_8.joblib'))
-    l_model = joblib.load(os.path.join(model_filepath, 'mlp_latency_11_8.joblib'))
-    neuron_state_model = joblib.load(os.path.join(model_filepath, "mlp_neuron_state_11_8.joblib"))
-    spike_or_not_model = joblib.load(os.path.join(model_filepath, "mlp_spike_or_not_11_8.joblib"))
+    e_static_model = joblib.load(os.path.join(model_filepath, 'spiking_neuron_mlp_static_energy.joblib'))
+    e_model = joblib.load(os.path.join(model_filepath, 'spiking_neuron_mlp_dynamic_energy.joblib'))
+    l_model = joblib.load(os.path.join(model_filepath, 'spiking_neuron_mlp_latency.joblib'))
+    neuron_state_model = joblib.load(os.path.join(model_filepath, "spiking_neuron_mlp_neuron_state.joblib"))
+    spike_or_not_model = joblib.load(os.path.join(model_filepath, "spiking_neuron_mlp_spike_or_not.joblib"))
 else:
     # Load in Catboost Models
     e_static_model = CatBoostRegressor()
-    e_static_model.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_7.cbm'))
+    e_static_model.load_model(os.path.join(model_filepath, 'spiking_neuron_catboost_static_energy.cbm'))
 
     e_model = CatBoostRegressor()
-    e_model.load_model(os.path.join(model_filepath, 'catboost_dynamic_energy_11_7.cbm'))
+    e_model.load_model(os.path.join(model_filepath, 'spiking_neuron_catboost_dynamic_energy.cbm'))
 
     l_model = CatBoostRegressor()
-    l_model.load_model(os.path.join(model_filepath, 'catboost_latency_11_7.cbm'))
+    l_model.load_model(os.path.join(model_filepath, 'spiking_neuron_catboost_latency.cbm'))
 
     neuron_state_model = CatBoostRegressor()
-    neuron_state_model.load_model(os.path.join(model_filepath, 'catboost_neuron_state_11_7.cbm'))
+    neuron_state_model.load_model(os.path.join(model_filepath, 'spiking_neuron_catboost_neuron_state.cbm'))
 
     spike_or_not_model = CatBoostClassifier()
-    spike_or_not_model.load_model(os.path.join(model_filepath, 'catboost_spike_or_not_11_7.cbm'))
+    spike_or_not_model.load_model(os.path.join(model_filepath, 'spiking_neuron_catboost_spike_or_not.cbm'))
 
 print("ML Models Loaded In")
 stop_timer("Load Models")
@@ -622,7 +622,7 @@ plt.legend(['Dynamic Energy', "Static Energy","Latency", "State"],ncol=4, prop={
 plt.tight_layout()
 if SAVE_FIGS:
     figure_name = "ml_inference_wrapper_MSE_over_time" + today
-    plt.savefig(os.path.join(figure_src_directory, figure_name+'.pdf'), format='pdf')
+    plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=400)
 
 # Get Metrics
 # For regressors

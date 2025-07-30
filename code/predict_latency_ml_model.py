@@ -134,7 +134,7 @@ catboost_params = {
 if DETERMINISTIC:
     catboost_params['random_seed'] = RANDOM_SEED
 
-catboost_model_save_name = "catboost_latency_11_7"
+catboost_model_save_name = "spiking_neuron_catboost_latency"
 cat_y_pred, train_time, test_time = run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, catboost_params, SAVE_CATBOOST_MODEL, os.path.join(dataset_ml_models, catboost_model_save_name),SAVE_CATBOOST_CPP)
 baseline_metrics = calculate_metrics(y_test, cat_y_pred)
 
@@ -156,7 +156,7 @@ hyperparameters_mlp = {
 if DETERMINISTIC:
     hyperparameters_mlp['random_state'] = RANDOM_SEED
 
-mlp_model_save_name = "mlp_latency_11_8"
+mlp_model_save_name = "spiking_neuron_mlp_latency"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_save_name))
 baseline_metrics = calculate_metrics(y_test, mlp_y_pred)
 table.add_row(["MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
@@ -186,7 +186,7 @@ plt.tight_layout()
 
 
 if SAVE_FIGS:
-    plt.savefig('../results/mlp_latency_model_correlation_plot_'+today+'.pdf', format='pdf')
+    plt.savefig('../results/mlp_latency_model_correlation_plot_'+today+'.png', format='png', dpi=400)
 
 # -----------------
 # Print and write the table to the file

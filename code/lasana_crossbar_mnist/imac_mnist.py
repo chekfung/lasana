@@ -23,6 +23,8 @@ csv_folder = 'separated_csvs_5_12_25_lasana_pseudo_neuron_8_bit'   # Per analog 
 
 USE_QUANTIZATION = True
 DAC_BITS = 8
+MODEL_RUN_NAME_DIFF_10 = "pcm_crossbar_diff_10_run" 
+MODEL_RUN_NAME_DIFF_30 = "pcm_crossbar_diff_30_run" 
 
 #list of inputs start
 data_dir=os.path.join('../../data', 'imac_mnist_model') #The directory where data files are located (both the weights, biases, and dataset inputs and labels)
@@ -275,34 +277,32 @@ def combine_horizontal_partition_outputs(outputs, layer_num, next_layer_neurons,
 
 # -----------
 # Load in 10 diff ML Models
-MODEL_RUN_NAME = "mac_unit_diff_10_run" 
-model_filepath = os.path.join('../../data', MODEL_RUN_NAME, 'ml_models')
+model_filepath = os.path.join('../../data', MODEL_RUN_NAME_DIFF_10, 'ml_models')
 e_static_model_10 = CatBoostRegressor()
-e_static_model_10.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_9.cbm'))
+e_static_model_10.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_static_energy.cbm'))
 
 e_model_10 = CatBoostRegressor()
-e_model_10.load_model(os.path.join(model_filepath, 'mac_catboost_dynamic_energy_11_9.cbm'))
+e_model_10.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_dynamic_energy.cbm'))
 
 l_model_10 = CatBoostRegressor()
-l_model_10.load_model(os.path.join(model_filepath, 'catboost_latency_11_9.cbm'))
+l_model_10.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_latency.cbm'))
 
 behavior_model_10 = CatBoostRegressor()
-behavior_model_10.load_model(os.path.join(model_filepath, 'mac_catboost_output_11_9.cbm'))
+behavior_model_10.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_output.cbm'))
 
 # Load in 30 diff ML Models
-MODEL_RUN_NAME = "mac_unit_diff_30_run" 
-model_filepath = os.path.join('../../data', MODEL_RUN_NAME, 'ml_models')
+model_filepath = os.path.join('../../data', MODEL_RUN_NAME_DIFF_30, 'ml_models')
 e_static_model_30 = CatBoostRegressor()
-e_static_model_30.load_model(os.path.join(model_filepath, 'catboost_static_energy_11_9.cbm'))
+e_static_model_30.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_static_energy.cbm'))
 
 e_model_30 = CatBoostRegressor()
-e_model_30.load_model(os.path.join(model_filepath, 'mac_catboost_dynamic_energy_11_9.cbm'))
+e_model_30.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_dynamic_energy.cbm'))
 
 l_model_30 = CatBoostRegressor()
-l_model_30.load_model(os.path.join(model_filepath, 'catboost_latency_11_9.cbm'))
+l_model_30.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_latency.cbm'))
 
 behavior_model_30 = CatBoostRegressor()
-behavior_model_30.load_model(os.path.join(model_filepath, 'mac_catboost_output_11_9.cbm'))
+behavior_model_30.load_model(os.path.join(model_filepath, 'pcm_crossbar_catboost_output.cbm'))
 
 # Open Dataset labels and inputs :)
 raw_input_data = pd.read_csv(os.path.join(data_dir, 'test_data.csv'), header=None).to_numpy()

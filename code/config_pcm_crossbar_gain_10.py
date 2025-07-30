@@ -1,6 +1,6 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
-# Spiking Circuit Run Hyperparameters
-RUN_NAME = 'mac_unit_diff_10_run'                           # Name of the run that will be created in data/
+# Circuit Run Hyperparameters
+RUN_NAME = 'pcm_crossbar_diff_10_run'                           # Name of the run that will be created in data/
 NUMBER_OF_RUNS = 1000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
@@ -59,7 +59,7 @@ KNOB_PARAMS.append(("bias_1", r_low, r_high, 'b'))
 WEIGHT_NET_NAMES_TO_CHANGE["bias_1"] = ("Rbpos1", "Rbneg1")
 
 # ---
-# Spiking Neuron Input Parameters
+# Input Parameters
 INPUT_CURRENT_SRC = False
 
 NUMBER_OF_WEIGHTS = 32                                           # In the spiking input case, the weight is tied directly to a spike. 
@@ -131,4 +131,4 @@ for i in range(NUMBER_OF_WEIGHTS):
     LIST_OF_COLUMNS_X_MAC.append(f"weight_{i+1}")
 LIST_OF_COLUMNS_X_MAC.append("bias_1")
 
-# ----------------------------- END Spike Model Training Hyperparameters ------------------------------ #
+# ----------------------------- END Model Training Hyperparameters ------------------------------ #

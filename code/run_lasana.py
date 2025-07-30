@@ -1,12 +1,16 @@
 import subprocess
 import sys
+import os
 
-# TODO: Update this to run everything! :)
+'''
+Headless script for artifact analysis for MLCAD 2025.
+Author: Jason Ho
+'''
 
 # List of Python file names you want to execute
 python_files = [
-    "testbench_generation.py",
-    "circuit_dataset_creation.py",
+    #"testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    #"circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
     "predict_dynamic_energy_ml_model.py",
     "predict_latency_ml_model.py",
     "predict_state_ml_model.py",
@@ -14,23 +18,29 @@ python_files = [
     "predict_static_energy_ml_model.py"
 ]  
 
-python_files_mac_unit = [
-    "testbench_generation.py",
-    "circuit_dataset_creation.py",
-    "mac_unit_predict_dynamic_energy_ml_model.py",
-    "mac_unit_predict_latency_ml_model.py",
-    "mac_unit_predict_behavior_ml_model.py",
-    "mac_unit_predict_static_energy_ml_model.py"
+python_files_pcm_crossbar = [
+    #"testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    #"circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    "pcm_crossbar_predict_dynamic_energy_ml_model.py",
+    "pcm_crossbar_predict_latency_ml_model.py",
+    "pcm_crossbar_predict_behavior_ml_model.py",
+    "pcm_crossbar_predict_static_energy_ml_model.py"
 ]  
 
 
-def run_python_files(files):
+def run_python_files(files, option=None, arg=None):
     for file in files:
         try:
             print('\n\n---------------------------------------')
-            print(f"Running {file}...")
-            # Run the python file as a subprocess and print the output to stdout in real-time
-            process = subprocess.Popen(['python', file, '--config', CONFIG], stdout=sys.stdout, stderr=sys.stderr, text=True)
+            print(f"Running {file} from run_lasana.py")
+
+            # Build the base command
+            cmd = ['python', file]
+            if option and arg:
+                cmd.extend([option, arg])
+
+            # Run the Python file as a subprocess and print output to stdout in real-time
+            process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, text=True)
 
             # Wait for the process to complete
             process.wait()
@@ -42,20 +52,85 @@ def run_python_files(files):
 
         except Exception as e:
             print(f"Error occurred while running {file}: {e}")
+            
 
 if __name__ == "__main__":
-    RUN_MAC_UNIT = False
-    CONFIG = 'config_spiking_neuron'
+    # ------------------------------------ #
 
-    RUN_MAC_UNIT = True
-    CONFIG = 'config_pcm_crossbar_gain_30'
+    ## 1. Run through LASANA model generation with a pre-evaluated circuit dataset since Cadence, Synopsys tools unavailable in Code Ocean
+    ## If one wants to generate the dataset from scratch, the scripts have been commented out above and can be run from this script as well.
+    ## This is testbench_generation.py and circuit_dataset_creation.py
+    ## Note: All of the ML models have been fixed to a certain seed for reproducability sake, but this can be disabled with the "DETERMINISTIC"
+    ##       flag in each of the respective config files.
+    ## Generates Table I, Table II, Figure 6 (a,b,c,d), Figure 7 (a,b,c,d) 
+    # Run LASANA for spiking dataset
 
-    if RUN_MAC_UNIT:
-        print(f"Running the following files: [{python_files_mac_unit}]")
-        run_python_files(python_files_mac_unit)
-    else:
-        print(f"Running the following files: [{python_files}]")
-        run_python_files(python_files)
+    CONFIG_SPIKING_NEURON = 'config_spiking_neuron'
+    print(f"Running the following files for Spiking Neuron: [{python_files}]")
+    run_python_files(python_files, '--config', CONFIG_SPIKING_NEURON)
+
+    # TODO: I think that I will just move relevant files into the results folder.
+
+    # Run LASANA for PCM crossbar with gain of 10
+    CONFIG_DIFF_10 = 'config_pcm_crossbar_gain_10'
+    print(f"Running the following files for PCM Crossbar Gain 10: [{python_files_pcm_crossbar}]")
+    run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_10)
+
+    # TODO: I think that I will just move relevant files into the results folder.
+
+    # TODO: Create script that combines the two tables together and makes them pretty so it looks like the table that we had.
+
+
+    # Run LASANA for PCM crossbar with gain of 30
+    CONFIG_DIFF_30 = 'config_pcm_crossbar_gain_30'
+    print(f"Running the following files for PCM Crossbar Gain 30: [{python_files_pcm_crossbar}]")
+    run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_30)
+
+    # TODO: I think that I will just move relevant files into the results folder.
+    
+    # ------------------------------------ #
+
+    ## 2. Recreate behavioral error error propagation experiment on 20k neuron layer
+    ## Creates Table III, and Figure 8
+    print(f"Running error propagation experiments for the LASANA Spiking Neuron")
+    run_python_files(['ml_inference_wrapper_spiking_neuron.py'])                # First run predicted
+    run_python_files(['ml_inference_wrapper_spiking_neuron.py'], '--oracle')    # After run 
+
+    # TODO: Create script that combines the two tables together and makes them pretty for table III
+    # TODO: I think that I will just move relevant files into the results folder.
+
+    # ------------------------------------ #
+
+    ## 3. Get timing / scaling information for LASANA spiking runtime
+    ## Note: Since it is not possible to run the SPICE / SV-RNM tools as they are not available in Code Ocean, we just run our runtime analysis
+    ##       on the spiking neuron. 
+    ## Note: The script for running the same timing is available at ml_inference_wrapper_pcm_crossbar.py, but is not run here.
+    print(f"Running Timing / Scaling experiments for the LASANA Spiking Neuron")
+    run_python_files(['ml_inference_wrapper_spiking_neuron_timing.py'])
+
+    # TODO: I think that I will just move relevant files into the results folder.
+
+    # ------------------------------------ #
+
+    ## 4. Run LASANA Spiking MNIST, and compare against golden results
+    ## Recreates partial results that are found in Section V.E (MNIST and Spiking MNIST Case Study) in the paper.
+    ## Since it is not possible to run the respective SPICE models for the two experiments, the code has been provided in the following scripts: 
+    ## TODO: List code to the SPICE circuits
+    ## Instead, due to space limitations, the first 500 inferences of each of the two test datasets have been provided in /data/#FIXME: for
+    ## the spiking neuron and /data/#FIXME: for the crossbar array.
+
+    # Run LASANA Spiking MNIST
+    print(f"Running first 500 test images of LASANA Spiking MNIST")
+    run_python_files(['lasana_spiking_mnist/run_mnist_lasana.py'])      # FIXME: Make it run first 500 images
+
+    # Run LASANA Crossbar MNIST
+    print(f"Running first 500 test images of LASANA Crossbar MNIST")
+    run_python_files(['lasana_crossbar_mnist/imac_mnist.py'])           # FIXME: Make it run first 500 images
+    
+    # Run Comparison Scripts
+    # TODO: Need to do this
+    # TODO: Also need it to spit out some nice results and then put into the results folder.
+
         
     print("All Runs Finished for LASANA!")
     print("Exiting gracefully :)")

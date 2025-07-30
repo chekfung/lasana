@@ -27,47 +27,64 @@ inject_config(args.config, globals())
 if DETERMINISTIC:
     random.seed(RANDOM_SEED)
     np.random.seed(RANDOM_SEED)
-
+    
 figure_counter = 0
 
+def adc(voltage, v_min=-0.8, v_max=0.8, bits=8):
+    """
+    Converts an analog voltage to a digital ADC value with saturation.
+    """
+    levels = 2 ** bits
+    step_size = (v_max - v_min) / (levels - 1)
+
+    # Saturate voltage
+    voltage = np.clip(voltage, v_min, v_max)
+
+
+    return np.round((voltage - v_min) / step_size).astype(int)
+
+
+def dac(adc_value, v_min=-0.8, v_max=0.8, bits=8):
+    """
+    Converts digital ADC values (scalar or array) back to analog voltages.
+    """
+    levels = 2 ** bits
+    step_size = (v_max - v_min) / (levels - 1)
+
+    adc_value = np.clip(adc_value, 0, levels - 1)  # element-wise clipping
+
+    return v_min + adc_value * step_size
+
+
 # --------- BEGIN Preprocessing ---------
-dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
 # Create ML Library
+dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
 if not os.path.exists(dataset_ml_models):
     os.makedirs(dataset_ml_models)
 
-run_metrics_filename = 'mac_unit_all_energy_model_analysis_' + today + '.csv'
+run_metrics_filename = 'output_model_analysis_' + today + '.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
 dataset_csv_filepath = os.path.join('../data', RUN_NAME, DF_FILENAME)
 
-spike_data_df = pd.read_csv(dataset_csv_filepath)
-spike_data_df['Latency'] = spike_data_df['Latency'] * 10**9
-spike_data_df['Energy'] = spike_data_df['Energy'] * 10**12
+data_df = pd.read_csv(dataset_csv_filepath)
+data_df['Latency'] = data_df['Latency'] * 10**9
+data_df['Energy'] = data_df['Energy'] * 10**12
 
-# Get the standard scaler
-std_scaler = produce_or_load_common_standard_scalar(spike_data_df, LIST_OF_COLUMNS_X_MAC, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT, random_state=42)
+print(data_df['Event_Type'].value_counts())
 
-# Label if there is input spike or not
-spike_data_df = spike_data_df[spike_data_df['Event_Type'].isin(['leak'])]
-
-# Generate input total charge histogram.
-plt.figure(figure_counter)
-figure_counter+=1
-plt.hist(spike_data_df["Energy"], bins=100)
-plt.title("Energy")
-if PLOT_MATPLOTLIB_FIGS:
-    plt.show()
+# Get the standard scaler in play :O
+std_scaler = produce_or_load_common_standard_scalar(data_df, LIST_OF_COLUMNS_X_MAC, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT,random_state=42)
 
 # Runwise train test split :)
-train_df, test_df, val_df = runwise_train_test_split(spike_data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
+train_df, test_df, val_df = runwise_train_test_split(data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
 X_train = train_df[LIST_OF_COLUMNS_X_MAC]
-y_train = train_df[["Energy"]]
+y_train = train_df[["Output_Value"]]
 X_test = test_df[LIST_OF_COLUMNS_X_MAC]
-y_test = test_df[["Energy"]]
+y_test = test_df[["Output_Value"]]
 X_val = val_df[LIST_OF_COLUMNS_X_MAC]
-y_val = val_df[["Energy"]]
+y_val = val_df[["Output_Value"]]
 
 # Logging
 print("Train Run Numbers")
@@ -80,11 +97,12 @@ print(test_df["Run_Number"].unique())
 print("Number of Train Samples: {}".format(X_train.shape[0]))
 print("Number of Validation Samples: {}".format(X_val.shape[0]))
 print("Number of Test Samples: {}".format(X_test.shape[0]))
+
 # --------- END Preprocessing ---------
 
 # Create table to make everything easier to visualize what the hell is going on
 table = PrettyTable()
-table.field_names = ["Regressor", "Train Time", "Inference Time", "MSE", "MAE", "MAPE", "R-Squared", "Average Error", "Predicted Energy Total", "Real Energy Total"]
+table.field_names = ["Regressor", "Train Time", "Inference Time", "MSE", "MAE", "MAPE", "R-Squared", "Average Error", "Predicted Output Total", "Real Output Total"]
 
 # Super Baseline
 # Super baseline is to just compare the MSE with using the mean value for the training dataset and apply that to the other one.
@@ -98,22 +116,26 @@ baseline_vec = np.full_like(y_test, fill_value=train_y_mean)
 end_time = time.time()
 test_time = end_time - start_time
 
-print("Mean Static Energy: {}".format(train_y_mean))
 baseline_metrics = calculate_metrics(y_test, baseline_vec)
 table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained Baseline Metric")
 
 # ---------------------
+
 # Nearest-Neighbor Interpolator (Table-based method)
 table_y_pred, train_time, test_time = interpolate(X_train, X_test, X_val, y_train, y_test, y_val)
 baseline_metrics = calculate_metrics(y_test, table_y_pred)
 table.add_row(["NN Interpolation", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained NN Interpolation")
 
+# ----------------------
 
-# ---------------------
 # Print Linear Regression Stuff
 ols_y_pred, train_time, test_time = train_linear_regression(X_train, X_test, X_val, y_train, y_test, y_val, std_scaler)
 baseline_metrics = calculate_metrics(y_test, ols_y_pred)
+
 table.add_row(["OLS", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained OLS")
 
 # -------------------------
 # CatBoost
@@ -123,21 +145,35 @@ catboost_params = {
     'depth': 10,
     'l2_leaf_reg': 5,
     'subsample': 0.5,
-    'verbose': False,
-    'eval_metric':'RMSE'
+    'eval_metric':'RMSE',
+    'verbose': False
 }
 
 if DETERMINISTIC:
     catboost_params['random_seed'] = RANDOM_SEED
 
-catboost_model_save_name = "catboost_static_energy_11_9"
-cat_y_pred, train_time, test_time = run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, catboost_params, SAVE_CATBOOST_MODEL, os.path.join(dataset_ml_models, catboost_model_save_name),SAVE_CATBOOST_CPP)
+catboost_model_name = "pcm_crossbar_catboost_output"
+cat_y_pred, train_time, test_time = run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, catboost_params, SAVE_CATBOOST_MODEL, os.path.join(dataset_ml_models, catboost_model_name),SAVE_CATBOOST_CPP, early_stopping=True)
 baseline_metrics = calculate_metrics(y_test, cat_y_pred)
-table.add_row(["CatBoost",  f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
-print("Finished CatBoost")
+table.add_row(["CatBoost", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+
+
+# Convert to ADC
+V_MAX = 0.8
+V_MIN = -0.8
+
+for i in range(4,17):
+    y_test_digital = dac(adc(y_test.to_numpy(), v_min=V_MIN, v_max=V_MAX, bits=i), v_min=V_MIN, v_max=V_MAX, bits=i)
+    y_pred_digital = dac(adc(cat_y_pred, v_min=V_MIN, v_max=V_MAX, bits=i), v_min=V_MIN, v_max=V_MAX, bits=i)
+    baseline_metrics = calculate_metrics(y_test_digital, y_pred_digital)
+    table.add_row([f"CatBoost ADC ({i} Bit)", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+
+print("Trained Catboost")
 
 # ----------------------------
-# MLP
+
+# Assuming X_train_scaled, X_test_scaled, y_train, y_test are your standardized train-test split data
+
 hyperparameters_mlp = {
     'hidden_layer_sizes': (100, 50),
     'activation': 'relu',
@@ -152,39 +188,42 @@ hyperparameters_mlp = {
 if DETERMINISTIC:
     hyperparameters_mlp['random_state'] = RANDOM_SEED
 
-mlp_model_name = "mlp_static_energy_11_8"
+mlp_model_name = "pcm_crossbar_mlp_output"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_name))
 baseline_metrics = calculate_metrics(y_test, mlp_y_pred)
 table.add_row(["MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+print("Trained MLP")
 
-# -------------------------------
-# Plot correlation plots for CatBoost and MLP
+# -----------------
+
+# Show correlation plots for MLP and CatBoost
 
 plt.figure(figure_counter)
-plt.gca().set_aspect('equal', adjustable='box')
 figure_counter+=1    
 plt.scatter(cat_y_pred, y_test, marker='x', linewidth=2)
-plt.xlabel("Predicted Energy (pJ)",fontsize=22,labelpad=10)
-plt.ylabel("SPICE Energy (pJ)",fontsize=22,labelpad=10)
-plt.gca().xaxis.set_major_locator(MultipleLocator(0.1))
-plt.gca().xaxis.set_minor_locator(MultipleLocator(.05))
-plt.gca().yaxis.set_major_locator(MultipleLocator(0.1))
-plt.gca().yaxis.set_minor_locator(MultipleLocator(.05))
+plt.plot([-1.95,1.95], [-1.95,1.95], '--', color='black', linewidth=3.5)
+plt.xlim(-2,2)
+plt.ylim(-2,2)
+plt.xlabel("Predicted Output (V)", fontsize=22)
+plt.ylabel("SPICE Output (V)", fontsize=22)
+plt.gca().set_aspect('equal', adjustable='box')
+plt.gca().xaxis.set_major_locator(MultipleLocator(1))
+plt.gca().xaxis.set_minor_locator(MultipleLocator(0.5))
+plt.gca().yaxis.set_major_locator(MultipleLocator(1))
+plt.gca().yaxis.set_minor_locator(MultipleLocator(0.5))
 plt.gca().tick_params(width=2.5, length=9, which='major',pad=10)  # Set linewidth and length for major ticks
 plt.gca().tick_params(width=2, length=6, which='minor')  # Set linewidth and length for minor ticks
-plt.plot([0.025, 0.375], [.025, .375], '--', color='black', linewidth=3.5)
-plt.xlim(0,0.4)
-plt.ylim(0,0.4)
 plt.xticks(fontsize=22)
 plt.yticks(fontsize=22)
+
 
 for spine in plt.gca().spines.values():
     spine.set_linewidth(2.5)
 plt.tight_layout()
 if SAVE_FIGS:
-    plt.savefig('../results/mac_catboost_static_energy_model_correlation_plot_'+today+'.pdf', format='pdf')
+    plt.savefig('../results/pcm_crossbar_catboost_behavior_model_correlation_plot_'+today+'.png', format='png', dpi=400)
 
-# -----------------
+# -------------------------------
 # Print and write the table to the file
 print(table)
 write_prettytable(metrics_output_filepath, table)
