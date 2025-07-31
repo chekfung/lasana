@@ -19,23 +19,24 @@ random.seed(42)
 
 # -----
 ## Hyperparameters 
+NUM_INFERENCES = 500                       
 BATCH_SIZE = 1                                              # Number of inferences to run per simulation before restarting simulation (ONLY SUPPORT BATCH OF 1)
 NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100                     # Number of timesteps for each input image
 PYTORCH_MODEL_FILE = '../../data/spiking_mnist_model.pt'    # Trained SNNTorch model for MNIST
-SAVE_PATH = '../../data/spiking_mnist_lasana_results'
 PLOT_THINGS = False
-NUM_INFERENCES = 500
-SAVE_LOGS = True
+SAVE_LOGS = True                           # Save output CSVs to the SAVE_PATH
+SAVE_PATH = '../../data/spiking_mnist_lasana_results'
+SAVE_ACC_PATH = '../../results/spiking_mnist_lasana_spice_comparison'           # Create path
 WEIGHT_SCALING = 1                         # Scaling of weights (to account for leak) 
 INPUT_SCALING = 2                          # Scaling of inputs between layers (note that input scaling implicitly affects weight scaling since weight scaling is applied first, then input scaling)
 
 # Neuron Hyperparameters
-LASANA_RUN_NAME = 'spiking_neuron_run'
+LASANA_RUN_NAME = 'spiking_neuron_run'      # Run where models are located        
 LASANA_MODELS_FD = os.path.join("../../data", LASANA_RUN_NAME, 'ml_models')
-LOAD_MLP_MODELS = True                     # Alternative is to load in CatBoost models :)
-DT = 5*10**-9       # Digital backend timestep
+LOAD_MLP_MODELS = True                      # Alternative is to load in CatBoost models :)
+DT = 5*10**-9                               # Digital backend timestep
 
-NEURON_PARAMETERS = [("V_sf", 0.5), ("V_adap", 0.5), ("V_leak", 0.57), ("V_rtr", 0.5)]      # Neuron parameters :)
+NEURON_PARAMETERS = [("V_sf", 0.5), ("V_adap", 0.5), ("V_leak", 0.57), ("V_rtr", 0.5)]      # Neuron parameters
 STARTING_VOLTAGE_STATE = 0
 
 # --------------------------------------
@@ -240,5 +241,11 @@ for images, labels in testloader:
 
 # Print full accuracies :)
 total_acc = total_correct / total_img * 100
-print(f"Total Accuracy: {total_correct} / {total_img}, {total_acc:.2f}%") 
-# TODO: We should save this into the results folder so that we can compare this :)
+print(f"LASANA Total Accuracy: {total_correct} / {total_img}, {total_acc:.2f}%") 
+
+# Print this into the results folder for the headless run
+if SAVE_ACC_PATH and not os.path.exists(SAVE_ACC_PATH):
+    os.makedirs(SAVE_ACC_PATH, exist_ok=True)
+
+with open(os.path.join(SAVE_ACC_PATH, 'metrics_summary.txt'), 'w') as f:
+    f.write(f"LASANA Total Accuracy: {total_correct} / {total_img}, {total_acc:.2f}%\n")

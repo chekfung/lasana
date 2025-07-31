@@ -15,16 +15,17 @@ np.random.seed(42)
 random.seed(42)
 
 # ------ BEGIN Hyperparameters -------
-testnum=500       #Number of input test cases to run
-testnum_per_batch=10 #Number of test cases in a single batch, testnum should be divisible by this number
-firstimage=0 #start the test inputs from this image\
-csv_name = '../../data/crossbar_mnist_lasana_acc_data.csv'     # Refers to top CSV for high level acc and energy # TODO: Change this
-csv_folder = '../../data/crossbar_mnist_lasana_results'   # Per analog block energy, latency, etc. logs
+testnum=500                                                                 # Number of input test cases to run
+testnum_per_batch=10                                                        # Number of test cases in a single batch, testnum should be divisible by this number
+firstimage=0                                                                # start the test inputs from this image\
+csv_name = '../../data/crossbar_mnist_lasana_acc_data.csv'                  # Refers to top CSV for high level acc and energy (where to save files)
+csv_folder = '../../data/crossbar_mnist_lasana_results'                     # Per analog block energy, latency, etc. logs (where to save files)
+SAVE_ACC_PATH = '../../results/crossbar_mnist_lasana_spice_comparison'      # Where to save the 
 
 USE_QUANTIZATION = True
-DAC_BITS = 8
-MODEL_RUN_NAME_DIFF_10 = "pcm_crossbar_diff_10_run" 
-MODEL_RUN_NAME_DIFF_30 = "pcm_crossbar_diff_30_run" 
+DAC_BITS = 8                                
+MODEL_RUN_NAME_DIFF_10 = "pcm_crossbar_diff_10_run"                         # Where the LASANA models are located for diff 10 PCM Crossbar 32x1
+MODEL_RUN_NAME_DIFF_30 = "pcm_crossbar_diff_30_run"                         # Where the LASASNA models are located for diff 30 PCM Crossbar 32x1
 
 #list of inputs start
 data_dir=os.path.join('../../data', 'imac_mnist_model') #The directory where data files are located (both the weights, biases, and dataset inputs and labels)
@@ -315,7 +316,7 @@ image_num=0 #number of image in the simulation
 testimage=firstimage
 
 # Determine Partitioning for this crossbar array :)
-print("Creating Parittions and Mapping Weights and Biases!")
+print("Creating Partitions and Mapping Weights and Biases!")
 layers, layer_cuts = determine_layer_partitions(nodes, xbar[0], hpar, vpar)
 layer_weights = {}
 
@@ -501,3 +502,10 @@ for i in range(num_batches):
 file.close()
 print(f"Finished Infernce on {testnum} Images!")
 print(f"Top Log File Written to: {csv_name}")
+
+# Print this into the results folder for the headless run
+if SAVE_ACC_PATH and not os.path.exists(SAVE_ACC_PATH):
+    os.makedirs(SAVE_ACC_PATH, exist_ok=True)
+
+with open(os.path.join(SAVE_ACC_PATH, 'metrics_summary.txt'), 'w') as f:
+    f.write(f"LASANA Total Accuracy: {correct} / {images_processed}, {correct / images_processed * 100:.2f}%\n")

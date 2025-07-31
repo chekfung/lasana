@@ -1,12 +1,50 @@
 import pandas as pd
 import os
-import matplotlib
-matplotlib.use('Agg') # set the backend before importing pyplot
-import matplotlib.pyplot as plt
 figure_counter = 0
-pd.set_option('display.max_columns', None)
 
-# FIXME: Get rid of MSE here because it is no longer needed.
+'''
+LASANA File for comparing Spectre / HSPICE golden results against the LASANA equivalents for MNIST.
+Specifically, this file provides high-level total energy, and latency comparisons per inference. Additionally, 
+since these networks consist of many strings of LASANA models that are strung together to represent a multitude
+of crossbars, we provide the latency and energy MAPEs as well, which show how each of the sub-modules inside of the
+network perform.
+
+For each of the equivalent runs, there is a top file that contains top-level information such as accuracy,
+full energy, etc. of each of the inferences. For each inference, there is also a separate file, labeled
+"image_X_inference", where X is the inference ID in the MNIST dataset.
+
+This script then spits out two results into the "results_folder." The results folder consists of per-inference
+results of average total energy, average total latency, energy MAPE, and latency MAPE. The second file is the same
+results that were printed to the console, but saved under metrics_summary.txt
+
+Note that following the scripts, these log files are created automatically, by both the SPICE MNIST scripts
+and LASANA scripts provided. 
+
+Author: Jason Ho
+'''
+
+# --------------------------
+# Start of the Hyperparameters
+
+RUN_FOLDER = "../data"                                                      # Where results are stored
+LASANA_RUNS = os.path.join(RUN_FOLDER, 'crossbar_mnist_lasana_results')     # LASANA specific log files where each .csv represents one image inference
+SPICE_RUNS = os.path.join(RUN_FOLDER, "crossbar_mnist_golden_results")      # SPICE specific log files where each .csv represents one image inference
+
+# Full CSV Runs
+FULL_IMAC = os.path.join(RUN_FOLDER,'crossbar_mnist_golden_acc_data.csv')   # LASANA specific top-log file which contains accuracy and total energy information
+FULL_LASANA = os.path.join(RUN_FOLDER,'crossbar_mnist_lasana_acc_data.csv') # SPICE specific top-log file which contains accuracy and total energy information
+
+# Output Name
+results_folder = '../results/crossbar_mnist_lasana_spice_comparison'        # Output folder where results will be dumped out
+
+NUM_IMAGES = 500                                                            # Number of images to be compared (Note: No error correction so will throw errors if there is a problem)
+IMAGE_OFFSET = 0                                                            # Image Offset of where to start. 
+NUM_LAYERS = 4                                                              # Number of layers in the neural network (not necessary, but an artifact from the other comparison script)
+LAYER_SIZES = [400, 128, 84, 10]                                            # Layer sizes (again, artifact from other comparison scripts)
+
+FILE_STR = "image_{}_inference.csv"                                         # File format for the logs. This is default, but unless someone changes it, this does not need to be changed
+
+# --------------------------
 
 def parse_circuit(name):
     parts = name.split('_')
@@ -53,38 +91,13 @@ def get_metrics(df_merged, custom_string="", supress_metrics=True):
     df_merged['mape_latency'] = abs(df_merged['latency_pred'] - df_merged['latency_true']) / df_merged['latency_true']
     mape_latency = df_merged['mape_latency'].mean() * 100
 
-    mse_energy = ((df_merged['energy_pred'] - df_merged['energy_true']) ** 2).mean()
-    mse_latency = ((df_merged['latency_pred'] - df_merged['latency_true']) ** 2).mean()
-    mse_output = ((df_merged['output_value_pred'] - df_merged['output_value_true']) ** 2).mean()
-
     if not supress_metrics:
         print(f"{custom_string} Energy MAPE: {mape_energy:.2f}%")
         print(f"{custom_string} Latency MAPE: {mape_latency:.2f}%")
-        print(f"{custom_string} MSE (energy): {mse_energy:.4f} pJ^2")
-        print(f"{custom_string} MSE (latency): {mse_latency:.4f} ns^2")
 
-    return total_latency_err, mape_energy, mape_latency, mse_energy, mse_latency, mse_output
+    return total_latency_err, mape_energy, mape_latency
 
 # --------------------------
-RUN_FOLDER = "../data"
-lasana_runs = os.path.join(RUN_FOLDER, 'crossbar_mnist_lasana_results')
-spice_runs = os.path.join(RUN_FOLDER, "crossbar_mnist_golden_results")
-
-# Full CSV Runs
-full_imac = os.path.join(RUN_FOLDER,'crossbar_mnist_golden_acc_data.csv')
-full_lasana = os.path.join(RUN_FOLDER,'crossbar_mnist_lasana_acc_data.csv')
-
-# Output Name
-results_folder = '../results/crossbar_mnist_lasana_spice_comparison'
-
-
-# This is just
-num_images = 50     
-num_layers = 4
-layer_sizes = [400, 128, 84, 10]
-image_offset = 0
-file_str = "image_{}_inference.csv"
-columns_of_interest = ["circuit_name", "latency", "energy", 'output_value']
 
 # Create Results folder if it does not exist
 if not os.path.exists(results_folder):
@@ -99,13 +112,19 @@ all_output_mses = []
 
 results = []
 
-for k in range(num_images):
-    print(f"image {k}")
-    image_id = k + image_offset
+# Look at full energies :)
+full_imac_spice = pd.read_csv(FULL_IMAC)
+full_imac_lasana = pd.read_csv(FULL_LASANA)
+df_merged_energy = pd.merge(full_imac_lasana, full_imac_spice, on=['image_num'], suffixes=('_pred', '_true'))
+df_merged_energy['percent_error_energy'] = (abs(df_merged_energy['energy_pred'] - df_merged_energy['energy_true']) / df_merged_energy['energy_true']) * 100
+
+for k in range(NUM_IMAGES):
+    image_id = k + IMAGE_OFFSET
+    print(f"Analyzing Image {image_id}")
 
     # Read file
-    lasana_run_df = pd.read_csv(os.path.join(lasana_runs, file_str.format(image_id)))
-    spice_run_df = pd.read_csv(os.path.join(spice_runs, file_str.format(image_id)))
+    lasana_run_df = pd.read_csv(os.path.join(LASANA_RUNS, FILE_STR.format(image_id)))
+    spice_run_df = pd.read_csv(os.path.join(SPICE_RUNS, FILE_STR.format(image_id)))
 
     # Parse Circuit 
     parsed_df = lasana_run_df['circuit_name'].apply(parse_circuit).apply(pd.Series)
@@ -125,54 +144,38 @@ for k in range(num_images):
     print(df_merged)
     
     # All
-    total_latency_err, all_energy_mape, all_latency_mape, all_energy_mse, all_latency_mse, all_output_mse = get_metrics(df_merged, "ALL")
+    total_latency_err, all_energy_mape, all_latency_mape = get_metrics(df_merged, "ALL")
     all_latency_mapes.append(all_latency_mape)
     all_energy_mapes.append(all_energy_mape)
-    all_output_mses.append(all_output_mse)
     latency_errs.append(total_latency_err)
+    total_energy_error = df_merged_energy.loc[df_merged_energy['image_num'] == image_num, 'percent_error_energy'].values
 
     row = {
-        "image_id": k,
-
-        # Overall
-        "all_energy_mape": all_energy_mape,
-        "all_latency_mape": all_latency_mape,
-        "all_energy_mse": all_energy_mse,
-        "all_latency_mse": all_latency_mse,
-        "all_output_mse": all_output_mse,
+        "image_id": image_id,
+        'total_energy_percentage_err': total_energy_error,
+        'total_latency_percentage_err': total_latency_err,
+        "dynamic_energy_MAPE": all_energy_mape,
+        "latency_MAPE": all_latency_mape
     }
-
     results.append(row)
 
-# Look at full energies :)
-full_imac_spice = pd.read_csv(full_imac)
-full_imac_lasana = pd.read_csv(full_lasana)
-df_merged = pd.merge(full_imac_lasana, full_imac_spice, on=['image_num'], suffixes=('_pred', '_true'))
-df_merged['percent_error_energy'] = (abs(df_merged['energy_pred'] - df_merged['energy_true']) / df_merged['energy_true']) * 100
-
-# TODO: Maybe save this output in a different way. Literally could just send to a text file in the results so that they have it.
-print(f"Num Images: {num_images}")
-print(f"Average Energy Error: {df_merged['percent_error_energy'].mean()}")
+print(f"Num Images: {NUM_IMAGES}")
+print(f"Average Energy Error: {df_merged_energy['percent_error_energy'].mean()}")
 print(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)}")
-print(f"Average MAPE All Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}")
-print(f"Average MAPE All Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}")
-#print(f"Average Output MSE / Image Inference:{sum(all_output_mses) / len(all_output_mses)}")
-
-
+print(f"Average MAPE Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}")
+print(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}")
 
 # Save all results to CSV so we do not have to recalculate :)
-# FIXME: Fix this such that it gives similar results to the other one :)p
 output_csv_name = os.path.join(results_folder, "per_inference_statistics.csv")
 df_metrics = pd.DataFrame(results)
 df_metrics.to_csv(output_csv_name, index=False)
 
-
 # Save Average Energy, Latency, Latency MAPE, and Dynamic Energy MAPE
 summary_file = os.path.join(results_folder, "metrics_summary.txt")
 
-with open(summary_file, "w") as f:
-    f.write(f"Num Images: {num_images}\n")
-    f.write(f"Average Energy Error: {df_merged['percent_error_energy'].mean()}\n")
+with open(summary_file, "a") as f:
+    f.write(f"Num Images: {NUM_IMAGES}\n")
+    f.write(f"Average Energy Error: {df_merged_energy['percent_error_energy'].mean()}\n")
     f.write(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)}\n")
-    f.write(f"Average MAPE All Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}\n")
-    f.write(f"Average MAPE All Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}\n")
+    f.write(f"Average MAPE Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}\n")
+    f.write(f"Average MAPE Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}\n")
