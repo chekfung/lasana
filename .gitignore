@@ -25,6 +25,10 @@ systemverilog/test/xcelium.d/
 /data/*run*
 /results/
 /data/*logs*
+/data/*golden*
+/data/*results*
+/data/crossbar_mnist_acc_data.csv
+/data/crossbar_mnist_lasana_acc_data.csv
 
 
 # C extensions

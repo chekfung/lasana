@@ -19,17 +19,18 @@ random.seed(42)
 
 # -----
 ## Hyperparameters 
-BATCH_SIZE = 1                             # Number of inferences to run per simulation before restarting simulation (ONLY SUPPORT BATCH OF 1)
-NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100     # Number of timesteps for each input image
-PYTORCH_MODEL_FILE = '../../data/spiking_mnist_model.pt'
+BATCH_SIZE = 1                                              # Number of inferences to run per simulation before restarting simulation (ONLY SUPPORT BATCH OF 1)
+NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100                     # Number of timesteps for each input image
+PYTORCH_MODEL_FILE = '../../data/spiking_mnist_model.pt'    # Trained SNNTorch model for MNIST
+SAVE_PATH = '../../data/spiking_mnist_lasana_results'
 PLOT_THINGS = False
-NUM_INFERENCES = 100
+NUM_INFERENCES = 500
 SAVE_LOGS = True
 WEIGHT_SCALING = 1                         # Scaling of weights (to account for leak) 
 INPUT_SCALING = 2                          # Scaling of inputs between layers (note that input scaling implicitly affects weight scaling since weight scaling is applied first, then input scaling)
 
 # Neuron Hyperparameters
-LASANA_RUN_NAME = 'spiking_neuron_run'#'explicit_edge_case_increase_spk_smaller_knob_range_3_10_25'#'explicit_edge_case_review_0.1_3_10_2025'#'larger_width_reset_2_6_2025'#'leak_works_1_29'
+LASANA_RUN_NAME = 'spiking_neuron_run'
 LASANA_MODELS_FD = os.path.join("../../data", LASANA_RUN_NAME, 'ml_models')
 LOAD_MLP_MODELS = True                     # Alternative is to load in CatBoost models :)
 DT = 5*10**-9       # Digital backend timestep
@@ -63,13 +64,10 @@ def poisson_spike_train(image, timesteps):
 ## - Start of Script -
 # Load in MNIST Dataset from 0 to 1
 
-# Make logs folder if does not exist
-lasana_log_folder = os.path.join('../../data', "lasana_spiking_mnist_logs")
-
 if SAVE_LOGS:
     # Create ML Library
-    if not os.path.exists(lasana_log_folder):
-        os.makedirs(lasana_log_folder)
+    if not os.path.exists(SAVE_PATH):
+        os.makedirs(SAVE_PATH)
 
 transform = transforms.Compose([transforms.ToTensor()])
 testset = torchvision.datasets.MNIST(root='../../data', train=False, download=True, transform=transform)
@@ -144,13 +142,13 @@ for images, labels in testloader:
     # Create Neural Network
     layer_0 = NeuronLayer("layer0",784, batch_num_timesteps, DT, neuron_params_runtime, model_weights['fc1.weight'],
                           128, WEIGHT_SCALING, std_scaler, 
-                          neuron_state_model, e_static_model, spike_or_not_model, e_model, l_model, LOAD_MLP_MODELS)
+                          neuron_state_model, e_static_model, spike_or_not_model, e_model, l_model, SAVE_PATH, LOAD_MLP_MODELS)
     layer_1 = NeuronLayer("layer1",128, batch_num_timesteps, DT, neuron_params_runtime, model_weights['fc2.weight'],
                           10, WEIGHT_SCALING, std_scaler, 
-                          neuron_state_model, e_static_model, spike_or_not_model, e_model, l_model, LOAD_MLP_MODELS)
+                          neuron_state_model, e_static_model, spike_or_not_model, e_model, l_model, SAVE_PATH, LOAD_MLP_MODELS)
     layer_2 = NeuronLayer("layer2",10, batch_num_timesteps, DT, neuron_params_runtime, None,
                           0, WEIGHT_SCALING, std_scaler, 
-                          neuron_state_model, e_static_model, spike_or_not_model, e_model, l_model, LOAD_MLP_MODELS)
+                          neuron_state_model, e_static_model, spike_or_not_model, e_model, l_model, SAVE_PATH, LOAD_MLP_MODELS)
 
     if PLOT_THINGS:
         # Plot the image
@@ -231,7 +229,7 @@ for images, labels in testloader:
     estimated_total_time = avg_time_per_iter * num_batches  # Projected total time
     remaining_time = estimated_total_time - elapsed_time  # Estimated time left
 
-    print(f"Iteration {current_batch+1}/{num_batches} - Elapsed: {elapsed_time:.2f}s, "
+    print(f"Iteration {current_batch+1}/{NUM_INFERENCES} - Elapsed: {elapsed_time:.2f}s, "
     f"Estimated Total: {estimated_total_time:.2f}s, Remaining: {remaining_time:.2f}s")
 
     current_batch +=1
@@ -242,4 +240,5 @@ for images, labels in testloader:
 
 # Print full accuracies :)
 total_acc = total_correct / total_img * 100
-print(f"Total Accuracy: {total_correct} / {total_img}, {total_acc:.2f}%")
+print(f"Total Accuracy: {total_correct} / {total_img}, {total_acc:.2f}%") 
+# TODO: We should save this into the results folder so that we can compare this :)

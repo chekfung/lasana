@@ -94,7 +94,7 @@ if __name__ == "__main__":
     ## Creates Table III, and Figure 8
     print(f"Running error propagation experiments for the LASANA Spiking Neuron")
     run_python_files(['ml_inference_wrapper_spiking_neuron.py'])                # First run predicted
-    run_python_files(['ml_inference_wrapper_spiking_neuron.py'], '--oracle')    # After run 
+    run_python_files(['ml_inference_wrapper_spiking_neuron.py'], '--oracle')    # After run oracle
 
     # TODO: Create script that combines the two tables together and makes them pretty for table III
     # TODO: I think that I will just move relevant files into the results folder.
@@ -121,11 +121,12 @@ if __name__ == "__main__":
 
     # Run LASANA Spiking MNIST
     print(f"Running first 500 test images of LASANA Spiking MNIST")
+    # FIXME: Note that before we run these, we need to CD into their respective directory
     run_python_files(['lasana_spiking_mnist/run_mnist_lasana.py'])      # FIXME: Make it run first 500 images
 
     # Run LASANA Crossbar MNIST
     print(f"Running first 500 test images of LASANA Crossbar MNIST")
-    run_python_files(['lasana_crossbar_mnist/imac_mnist.py'])           # FIXME: Make it run first 500 images
+    #run_python_files(['lasana_crossbar_mnist/imac_mnist.py'])           # FIXME: Make it run first 500 images
     
     # Run Comparison Scripts
     # TODO: Need to do this

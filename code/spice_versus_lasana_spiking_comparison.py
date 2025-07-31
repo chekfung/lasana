@@ -1,44 +1,34 @@
 import pandas as pd
 import os
 import numpy as np 
-import matplotlib
-matplotlib.use('Agg') # set the backend before importing pyplot
-import matplotlib.pyplot as plt
-from sklearn.metrics import confusion_matrix, mean_absolute_percentage_error
-from create_spikes import *
+from sklearn.metrics import mean_absolute_percentage_error
 figure_counter = 0
 
-# Function to calculate percentage error between spike counts
-def calculate_percentage_error(spice_spikes, lasana_spikes):
-    """
-    Calculate the percentage error between spice and lasana spike counts.
-    
-    Parameters:
-    - spice_spikes: Spike count for spice dataset.
-    - lasana_spikes: Spike count for lasana dataset.
-    
-    Returns:
-    - Percentage error as a float. If lasana_spikes is zero, returns 100% error.
-    """
-    if lasana_spikes == 0:
-        return 0  # If lasana_spikes is zero, we assume 100% error (to avoid division by zero)
-    return abs(spice_spikes - lasana_spikes) / lasana_spikes * 100
+RUN_FOLDER = "../data"
+lasana_runs = os.path.join(RUN_FOLDER, 'spiking_mnist_lasana_results')
+spice_runs = os.path.join(RUN_FOLDER, 'spiking_mnist_golden_results')
+results_folder = '../results/spiking_mnist_lasana_spice_comparison'
 
-# TODO: Fix this
-RUN_FOLDER = "D:/spiking_mnist_runs/"
-lasana_runs = os.path.join(RUN_FOLDER, 'lasana/4_11_run_lasana_logs')
-spice_runs = os.path.join(RUN_FOLDER, 'spiking_spice_mnist')
-
-# This is just
 num_layers = 3
 layer_sizes = [784, 128, 10]
 num_timesteps = 100
-num_images = 10000
+num_images = 500
 image_offset = 0
 lasana_str = '{}_spike_info_layer{}.csv'
 spice_str = 'img{}_layer{}_events_dataset.csv'
 columns_of_interest = ["Neuron_Num","Digital_Time_Step","Event_Type", 'Weight', "Output_Spike", 'Energy', "Latency", "Cap_Voltage_At_Input_Start","Cap_Voltage_At_Output_End"]
 
+# --------------------------------------
+# Create Results folder if it does not exist
+if not os.path.exists(results_folder):
+    os.makedirs(results_folder)
+
+def calculate_percentage_error(spice_spikes, lasana_spikes):
+    if lasana_spikes == 0:
+        return 0  # If lasana_spikes is zero, we assume 100% error (to avoid division by zero)
+    return abs(spice_spikes - lasana_spikes) / lasana_spikes * 100
+
+img_ids = []
 energy_errs = []
 latency_errs = []
 latency_mape = []
@@ -47,6 +37,7 @@ dynamic_energy_mape = []
 for k in range(num_images):
     print(f"image {k}")
     image_id = k + image_offset
+    img_ids.append(image_id)
 
     lasana_dfs = {}
     spice_dfs = {}
@@ -184,9 +175,27 @@ for k in range(num_images):
     print(f"Dynamic Energy MAPE: {mape}%")
     dynamic_energy_mape.append(mape)
 
-# TODO: Maybe save this output in a different way. Literally could just send to a text file in the results so that they have it.
 print(f"Num Images: {num_images}")
 print(f"Average Energy Error: {sum(energy_errs) / len(energy_errs)}")
 print(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)} ")
 print(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}")
 print(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(dynamic_energy_mape) / len(dynamic_energy_mape)}")
+
+# Create Pandas DF to save everything to
+data = list(zip(img_ids, energy_errs, latency_errs, dynamic_energy_mape, latency_mape))
+columns = ['image_id', 'total_energy_percentage_err', 'total_latency_percentage_err',  "dynamic_energy_MAPE", 'latency_MAPE']
+
+df = pd.DataFrame(data, columns=columns)
+df.to_csv(os.path.join(results_folder, 'per_inference_statistics.csv'), index=False)
+
+# Save Average Energy, Latency, Latency MAPE, and Dynamic Energy MAPE
+summary_file = os.path.join(results_folder, "metrics_summary.txt")
+
+with open(summary_file, "w") as f:
+    # TODO: Would be really cool if we could get accuracy here :)
+    f.write(f"Num Images: {num_images}\n")
+    f.write(f"Average Energy Error: {sum(energy_errs) / len(energy_errs)}\n")
+    f.write(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)}\n")
+    f.write(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}\n")
+    f.write(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(dynamic_energy_mape) / len(dynamic_energy_mape)}\n")
+

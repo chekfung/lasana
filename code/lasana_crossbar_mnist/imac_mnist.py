@@ -15,11 +15,11 @@ np.random.seed(42)
 random.seed(42)
 
 # ------ BEGIN Hyperparameters -------
-testnum=10000       #Number of input test cases to run
+testnum=500       #Number of input test cases to run
 testnum_per_batch=10 #Number of test cases in a single batch, testnum should be divisible by this number
 firstimage=0 #start the test inputs from this image\
-csv_name = '5_12_2025_full_run_lasana_pseudo_neuron_8_bit.csv'     # Refers to top CSV for high level acc and energy # TODO: Change this
-csv_folder = 'separated_csvs_5_12_25_lasana_pseudo_neuron_8_bit'   # Per analog block energy, latency, etc. logs
+csv_name = '../../data/crossbar_mnist_lasana_acc_data.csv'     # Refers to top CSV for high level acc and energy # TODO: Change this
+csv_folder = '../../data/crossbar_mnist_lasana_results'   # Per analog block energy, latency, etc. logs
 
 USE_QUANTIZATION = True
 DAC_BITS = 8

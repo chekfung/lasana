@@ -1,11 +1,12 @@
 import numpy as np
 import pandas as pd
+import os
 from collections import defaultdict
 
 class NeuronLayer:
     def __init__(self, layer_name, num_neurons, num_time_steps, period, neuron_params, weights, next_layer_num_neurons, weight_scaling_factor,
                  std_scaler, neuron_state_model, e_static_model, spike_or_not_model, 
-                 e_model, l_model, load_in_mlp_models=False):
+                 e_model, l_model, save_path, load_in_mlp_models=False):
         # Initialize the layer with necessary parameters
         self.name = layer_name
         self.num_neurons = num_neurons
@@ -16,6 +17,7 @@ class NeuronLayer:
         self.weights = weights
         self.next_layer_num_neurons = next_layer_num_neurons
         self.weight_scaling_factor = weight_scaling_factor
+        self.save_path = save_path
 
         # MLP Model Add Ons
         self.load_in_mlp_models = load_in_mlp_models
@@ -274,4 +276,5 @@ class NeuronLayer:
         mega_df = pd.concat(all_guys)
         df_sorted = mega_df.sort_values(by=['Neuron_Num', 'Digital_Time_Step'])
 
-        df_sorted.to_csv(f"../../data/lasana_spiking_mnist_logs/{image_num}_spike_info_{self.name}.csv", index=False)
+        save_location = f"{image_num}_spike_info_{self.name}.csv"
+        df_sorted.to_csv(os.path.join(self.save_path, save_location), index=False)
