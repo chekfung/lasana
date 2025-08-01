@@ -176,3 +176,21 @@ Additionally, near the end of the script, we can uncomment line 160, and line 16
 
 ## Dependencies
 Our runs, the Code Ocean runs, etc. have all been run in Python 3.8.*. We have also provided the essential dependencies in `requirements.txt`, if one wants to recreate the same results locally.
+
+
+
+## Citation
+If you use this work, please cite our paper:
+
+J. Ho, J. A. Boyle, L. Liu, and A. Gerstlauer, “LASANA: Large‑Scale Surrogate Modeling for Analog Neuromorphic Architecture Exploration,” arXiv preprint arXiv:2507.10748, 2025, accepted at MLCAD 2025.
+
+**BibTeX**
+```
+@article{Ho2025LASANA,
+  author       = {Ho, Jason and Boyle, James A. and Liu, Linshen and Gerstlauer, Andreas},
+  title        = {LASANA: Large-Scale Surrogate Modeling for Analog Neuromorphic Architecture Exploration},
+  journal      = {arXiv preprint arXiv:2507.10748},
+  year         = {2025},
+  note         = {Accepted to MLCAD 2025},
+  doi          = {10.48550/arXiv.2507.10748}
+}
