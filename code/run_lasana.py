@@ -30,7 +30,7 @@ python_files_pcm_crossbar = [
 def run_python_files(files, option=None, arg=None):
     for file in files:
         try:
-            print('\n\n---------------------------------------')
+            print('\n---------------------------------------')
             print(f"Running {file} from run_lasana.py")
 
             # Build the base command
@@ -67,16 +67,19 @@ if __name__ == "__main__":
     # Run LASANA for spiking dataset
 
     CONFIG_SPIKING_NEURON = 'config_spiking_neuron'
+    print('\n\n---------------------------------------')
     print(f"Running the following files for Spiking Neuron: [{python_files}]")
     run_python_files(python_files, '--config', CONFIG_SPIKING_NEURON)
 
     # Run LASANA for PCM crossbar with gain of 10
     CONFIG_DIFF_10 = 'config_pcm_crossbar_gain_10'
+    print('\n\n---------------------------------------')
     print(f"Running the following files for PCM Crossbar Gain 10: [{python_files_pcm_crossbar}]")
     run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_10)
 
     # Run LASANA for PCM crossbar with gain of 30
     CONFIG_DIFF_30 = 'config_pcm_crossbar_gain_30'
+    print('\n\n---------------------------------------')
     print(f"Running the following files for PCM Crossbar Gain 30: [{python_files_pcm_crossbar}]")
     run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_30)
 
@@ -88,7 +91,9 @@ if __name__ == "__main__":
     ## 2. Recreate behavioral error error propagation experiment on 20k neuron layer
     ## Creates Table III, and Figure 8
     print(f"Running error propagation experiments for the LASANA Spiking Neuron")
+    print('\n\n---------------------------------------')
     run_python_files(['ml_inference_wrapper_spiking_neuron.py'])                # First run predicted
+    print('\n\n---------------------------------------')
     run_python_files(['ml_inference_wrapper_spiking_neuron.py'], '--oracle')    # After run oracle
 
     # TODO: Create script that combines the two tables together and makes them pretty for table III
@@ -100,6 +105,7 @@ if __name__ == "__main__":
     ## Note: Since it is not possible to run the SPICE / SV-RNM tools as they are not available in Code Ocean, we just run our runtime analysis
     ##       on the spiking neuron. 
     ## Note: The script for running the same timing is available at ml_inference_wrapper_pcm_crossbar.py, but is not run here.
+    print('\n\n---------------------------------------')
     print(f"Running Timing / Scaling experiments for the LASANA Spiking Neuron")
     run_python_files(['ml_inference_wrapper_spiking_neuron_timing.py'])
 
@@ -116,12 +122,14 @@ if __name__ == "__main__":
 
     # Run LASANA Spiking MNIST
     os.chdir("lasana_spiking_mnist")
+    print('\n\n---------------------------------------')
     print(f"Running first 500 test images of LASANA Spiking MNIST")
     run_python_files(['run_mnist_lasana.py'])     
 
     # Run LASANA Crossbar MNIST
     os.chdir('..')
     os.chdir("lasana_crossbar_mnist")
+    print('\n\n---------------------------------------')
     print(f"Running first 500 test images of LASANA Crossbar MNIST")
     run_python_files(['imac_mnist.py'])      
     
@@ -129,10 +137,12 @@ if __name__ == "__main__":
     os.chdir('..')
 
     # Run Spiking MNIST comparison scripts on first 500 inferences
+    print('\n\n---------------------------------------')
     print("Running Spiking MNIST Comparison Script")    
     run_python_files(['spice_versus_lasana_spiking_comparison.py'])
 
     # Run Crossbar MNIST comparison scripts on first 500 inferences
+    print('\n\n---------------------------------------')
     print("Running Crossbar MNIST Comparison Script")
     run_python_files(['spice_versus_lasana_imac_comparison.py'])
 

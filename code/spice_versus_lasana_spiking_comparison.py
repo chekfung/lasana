@@ -171,8 +171,6 @@ for k in range(NUM_IMAGES):
             (spice_dfs[i]['Event_Type'] == 'in-out')
         ]
 
-        lasana_filtered = lasana_dfs[i]
-
         # Rename latency columns to distinguish them after merge
         spice_filtered = spice_filtered.rename(columns={'Energy': 'Energy_spice'})
         lasana_filtered = lasana_filtered.rename(columns={'Energy': 'Energy_lasana'})
