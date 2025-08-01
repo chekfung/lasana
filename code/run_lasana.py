@@ -37,6 +37,8 @@ def run_python_files(files, option=None, arg=None):
             cmd = ['python', file]
             if option and arg:
                 cmd.extend([option, arg])
+            elif option:
+                cmd.extend([option])
 
             # Run the Python file as a subprocess and print output to stdout in real-time
             process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr, text=True)

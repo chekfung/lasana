@@ -60,8 +60,9 @@ latency_mape = []
 dynamic_energy_mape = []
 
 for k in range(NUM_IMAGES):
-    image_id = k + image_offset
-    print(f"Analyzing Image {image_id}")
+    image_id = k + IMAGE_OFFSET
+    if image_id % 50 == 0:
+        print(f"Analyzing Image {image_id}")
     img_ids.append(image_id)
 
     lasana_dfs = {}

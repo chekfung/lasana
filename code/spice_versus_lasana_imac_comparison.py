@@ -120,7 +120,8 @@ df_merged_energy['percent_error_energy'] = (abs(df_merged_energy['energy_pred'] 
 
 for k in range(NUM_IMAGES):
     image_id = k + IMAGE_OFFSET
-    print(f"Analyzing Image {image_id}")
+    if image_id % 50 == 0:
+        print(f"Analyzing Image {image_id}")
 
     # Read file
     lasana_run_df = pd.read_csv(os.path.join(LASANA_RUNS, FILE_STR.format(image_id)))
@@ -141,18 +142,16 @@ for k in range(NUM_IMAGES):
                     suffixes=('_pred', '_true')
                 )
     
-    print(df_merged)
-    
     # All
     total_latency_err, all_energy_mape, all_latency_mape = get_metrics(df_merged, "ALL")
     all_latency_mapes.append(all_latency_mape)
     all_energy_mapes.append(all_energy_mape)
     latency_errs.append(total_latency_err)
-    total_energy_error = df_merged_energy.loc[df_merged_energy['image_num'] == image_num, 'percent_error_energy'].values
+    total_energy_error = df_merged_energy.loc[df_merged_energy['image_num'] == image_id, 'percent_error_energy'].values
 
     row = {
         "image_id": image_id,
-        'total_energy_percentage_err': total_energy_error,
+        'total_energy_percentage_err': total_energy_error[0],
         'total_latency_percentage_err': total_latency_err,
         "dynamic_energy_MAPE": all_energy_mape,
         "latency_MAPE": all_latency_mape

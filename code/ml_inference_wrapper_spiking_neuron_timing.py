@@ -224,7 +224,7 @@ for neurons in num_neurons:
 
     run_end_time = time.time()
     full_time_for_run = run_end_time - run_start_time
-    print("{:7f}".format(full_time_for_run))
+    print("Neurons: {}, Time: {:7f}".format(neurons, full_time_for_run))
 
     timing_table.add_row([neurons, full_time_for_run])
 

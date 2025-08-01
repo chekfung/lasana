@@ -38,7 +38,7 @@ MODEL_RUN_NAME = "spiking_neuron_run"
 CSV_NAME = 'spiking_neuron_dataset.csv'
 LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
 NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
-NUM_NEURONS = 20000    
+NUM_NEURONS = 20000      
 PERIOD = 5 * 10**-9  
 LOAD_IN_MLP_MODELS = True
 

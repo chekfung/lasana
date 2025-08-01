@@ -223,7 +223,7 @@ for images, labels in testloader:
     iter_end = time.time()  # End time for this iteration
     elapsed_time = iter_end - start_time  # Time since the loop started
     avg_time_per_iter = elapsed_time / (current_batch +1) # Average time per iteration
-    estimated_total_time = avg_time_per_iter * num_batches  # Projected total time
+    estimated_total_time = avg_time_per_iter * NUM_INFERENCES  # Projected total time
     remaining_time = estimated_total_time - elapsed_time  # Estimated time left
 
     print(f"Iteration {current_batch+1}/{NUM_INFERENCES} - Elapsed: {elapsed_time:.2f}s, "
