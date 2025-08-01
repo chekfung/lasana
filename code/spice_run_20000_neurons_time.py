@@ -1,7 +1,6 @@
 from PyLTSpice import SimCommander, RawRead
 import os
 import numpy as np
-import matplotlib.pyplot as plt
 from create_spikes import generate_spike_map, generate_output_vector, create_pwl_file, analyze_spike_file, generate_spike_map_digital
 from collections import defaultdict
 import shutil
