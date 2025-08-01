@@ -40,7 +40,7 @@ if SAVE_CATBOOST_MODEL or SAVE_MLP_MODEL:
     if not os.path.exists(dataset_ml_models):
         os.makedirs(dataset_ml_models)
 
-run_metrics_filename = 'latency_model_analysis_' + today + '.csv'
+run_metrics_filename = 'latency_model_analysis.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
@@ -185,7 +185,7 @@ for spine in plt.gca().spines.values():
 plt.tight_layout()
 
 if SAVE_FIGS:
-    plt.savefig('../results/pcm_crossbar_catboost_latency_model_correlation_plot_'+today+'.png', format='png', dpi=400)
+    plt.savefig('../results/pcm_crossbar_catboost_latency_model_correlation_plot.png', format='png', dpi=400)
 
 # -----------------
 # Print and write the table to the file

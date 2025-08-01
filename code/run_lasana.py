@@ -116,7 +116,8 @@ if __name__ == "__main__":
     ## 4. Run LASANA Spiking MNIST, and compare against golden results
     ## Recreates partial results that are found in Section V.E (MNIST and Spiking MNIST Case Study) in the paper.
     ## Since it is not possible to run the respective SPICE models for the two experiments, the code has been provided in the following scripts: 
-    ## TODO: List code to the SPICE circuits
+    ## Spiking Neuron: spice_mnist.py
+    ## PCM Crossbar: spice_crossbar_mnist.py
     ## Instead, due to space limitations, the first 500 inferences of each of the two test datasets have been provided in /data/crossbar_mnist_golden_results for
     ## the spiking neuron and /data/spiking_mnist_golden_results for the crossbar array.
 
@@ -132,9 +133,15 @@ if __name__ == "__main__":
     print('\n\n---------------------------------------')
     print(f"Running first 500 test images of LASANA Crossbar MNIST")
     run_python_files(['imac_mnist.py'])      
-    
-    # Run Comparison Scripts
     os.chdir('..')
+
+    # Run Spiking MNIST (Commented out due to lack of CAD tools)
+    # run_python_files(['spice_mnist.py'])
+
+    # Run Crossbar MNIST (Commented out due to lack of CAD tools)
+    # run_python_files(['spice_crossbar_mnist.py'])
+
+    # Run Comparison Scripts
 
     # Run Spiking MNIST comparison scripts on first 500 inferences
     print('\n\n---------------------------------------')

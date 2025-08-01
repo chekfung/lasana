@@ -179,7 +179,7 @@ print("NUMBER OF SPIKE POINTS: {}".format(SPIKE_FOOTPRINT.shape[0]))
 
 # Load MNIST Dictionary and Model Weights 
 transform = transforms.Compose([transforms.ToTensor()])
-testset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
+testset = torchvision.datasets.MNIST(root='../data', train=False, download=True, transform=transform)
 subset_testset = torch.utils.data.Subset(testset, range(IMAGE_START_OFFSET, min(len(testset), MAX_IMAGE_ID+1)))
 testloader = torch.utils.data.DataLoader(subset_testset, batch_size=BATCH_SIZE, shuffle=False)
 num_batches = len(testloader)

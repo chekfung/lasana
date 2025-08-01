@@ -622,7 +622,7 @@ plt.ylabel("Normalized MSE", fontsize=9)
 plt.legend(['Dynamic Energy', "Static Energy","Latency", "State"],ncol=4, prop={'size': 8},loc='lower center', framealpha=0.5)
 plt.tight_layout()
 if SAVE_FIGS:
-    figure_name = "ml_inference_wrapper_MSE_over_time" + today
+    figure_name = "ml_inference_wrapper_MSE_over_time"
     plt.savefig(os.path.join(figure_src_directory, figure_name+'.png'), format='png', dpi=400)
 
 # Get Metrics
@@ -650,7 +650,13 @@ if ORACLE:
 else:
     tag = "predicted"
 
-write_prettytable(os.path.join('../results', f"ml_inference_wrapper_regressor_{tag}.csv"), regressor_table)
+intermediate_csv_file_folder = '../data/ml_inference_wrapper_intermediate_results'
+
+if not os.path.exists(intermediate_csv_file_folder):
+    os.makedirs(intermediate_csv_file_folder)
+    print(f"Directory '{intermediate_csv_file_folder}' created successfully.")
+
+write_prettytable(os.path.join(intermediate_csv_file_folder, f"ml_inference_wrapper_regressor_{tag}.csv"), regressor_table)
 
 # For classifiers
 classifier_table = PrettyTable()
@@ -660,7 +666,7 @@ metrics = classification_metrics(spice_results_together[:, 0], predicted_spike_o
 classifier_table.add_row(["Output Spike or Not"]+metrics)
 
 print(classifier_table)
-write_prettytable(os.path.join('../results', f"ml_inference_wrapper_classifier_{tag}.csv"), classifier_table)
+write_prettytable(os.path.join(intermediate_csv_file_folder, f"ml_inference_wrapper_classifier_{tag}.csv"), classifier_table)
 
 # ----
 print(f"Total Predicted Energy: {total_neuron_energies}")

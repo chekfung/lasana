@@ -40,7 +40,7 @@ if SAVE_CATBOOST_MODEL or SAVE_MLP_MODEL:
         os.makedirs(dataset_ml_models)
 
 
-run_metrics_filename = 'spike_or_not_model_analysis_' + today + '.csv'
+run_metrics_filename = 'spike_or_not_model_analysis.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
@@ -104,7 +104,6 @@ end_time = time.time()
 test_time = end_time - start_time
 
 baseline_metrics = calculate_binary_classification_metrics(y_test, baseline_vec)
-print(baseline_metrics)
 
 table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 

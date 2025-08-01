@@ -37,7 +37,7 @@ dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
 if not os.path.exists(dataset_ml_models):
     os.makedirs(dataset_ml_models)
 
-run_metrics_filename = 'static_energy_model_analysis_' + today + '.csv'
+run_metrics_filename = 'static_energy_model_analysis.csv'
 metrics_output_filepath = os.path.join(dataset_ml_models, run_metrics_filename)
 
 # Find full dataset and put into dataframe
@@ -91,7 +91,6 @@ baseline_vec = np.full_like(y_test, fill_value=train_y_mean)
 end_time = time.time()
 test_time = end_time - start_time
 
-print("Mean Static Energy: {}".format(train_y_mean))
 baseline_metrics = calculate_metrics(y_test, baseline_vec)
 table.add_row(["Mean Baseline", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
@@ -174,7 +173,7 @@ for spine in plt.gca().spines.values():
     spine.set_linewidth(2.5)
 plt.tight_layout()
 if SAVE_FIGS:
-    plt.savefig('../results/pcm_crossbar_catboost_static_energy_model_correlation_plot_'+today+'.png', format='png', dpi=400)
+    plt.savefig('../results/pcm_crossbar_catboost_static_energy_model_correlation_plot.png', format='png', dpi=400)
 
 # -----------------
 # Print and write the table to the file
