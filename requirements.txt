@@ -12,6 +12,7 @@ snntorch==0.9.1
 types-python-dateutil==2.9.0.20241003
 PyLTSpice==5.4.0
 dill==0.3.9
+torch==2.4.1
 torchvision==0.19.1
 nir==1.0.1
 nirtorch==1.0
