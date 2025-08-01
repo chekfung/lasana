@@ -56,7 +56,7 @@ The logs for this are also impossiblly large (multiple TB), so note before runni
 '''
 # ----------
 # START HYPERPARAMETERS
-RUN_NAME = 'test_spiking_mnist_golden_results'
+RUN_NAME = 'spiking_mnist_golden_results'
 NUMBER_OF_IMAGES = 10000                          # Arbitrarily set the number of runs
 IMAGE_START_OFFSET = 0
 NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100
@@ -116,7 +116,7 @@ if SIMULATOR == 'spectre':
 # -----------------
 # Create all necessary I/O filepath 
 
-# Simulator detection
+# Simulator detectionp
 sim_str = idiot_proof_sim_string(SIMULATOR)
 assert(is_simulator_real(sim_str))
 
@@ -124,7 +124,7 @@ PWL_FILE_TEMPLATE = RUN_NAME + "_" + "pwl_file_img{}_l{}_n{}.txt"       # First 
 
 # File IO to create directory structure for run
 RUN_DIRECTORY = os.path.join('../data', RUN_NAME)
-CSV_DIRECTORY = os.path.join(RUN_DIRECTORY, 'event_csvs')
+CSV_DIRECTORY = os.path.join(RUN_DIRECTORY)
 LIBRARIES_DIRCTORY = os.path.join(RUN_DIRECTORY, 'libraries')
 PWL_FILE_MAIN_DIRECTORY = os.path.join(RUN_DIRECTORY, "pwl_files")
 SPICE_RUN_DIRECTORY = os.path.join(RUN_DIRECTORY, 'spice_runs')

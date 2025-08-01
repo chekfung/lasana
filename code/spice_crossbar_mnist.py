@@ -36,8 +36,8 @@ start = time.time()
 testnum=10                                   # Number of input test cases to run
 testnum_per_batch=10                            # Number of test cases in a single batch, testnum should be divisible by this number
 firstimage=0                                    # start the test inputs from this image
-csv_name = '../data/test_crossbar_mnist_golden_acc_data.csv.csv' # TODO: Change this to overwrite data 
-csv_folder = '../data/test_crossbar_mnist_golden_results'        # TODO: Change this to overwrite data
+csv_name = '../data/crossbar_mnist_golden_acc_data.csv.csv' # TODO: This will overwrite the previous data
+csv_folder = '../data/crossbar_mnist_golden_results'        # TODO: This will overwrite the previous data
 RESULTS_PATH = '../results'
 
 # Quantization Constants
