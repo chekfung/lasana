@@ -9,7 +9,7 @@ import mapIMACPartition_Separate_Files
 import mapWB
 import numpy as np
 import csv
-from tools_helper import *
+from tools_helper_imac import *
 
 """
 This script builds upon and extends work presented in the following publication:
@@ -36,8 +36,8 @@ start = time.time()
 testnum=10000                                   # Number of input test cases to run
 testnum_per_batch=10                            # Number of test cases in a single batch, testnum should be divisible by this number
 firstimage=0                                    # start the test inputs from this image
-csv_name = '../data/test.csv'#'../data/crossbar_mnist_lasana_acc_data.csv'      # FIXME: Change this back
-csv_folder = '../data/test_crossbar_mnist_golden_results'#../data/crossbar_mnist_golden_results' # FIXME: Change this back
+csv_name = '../data/test_crossbar_mnist_golden_acc_data.csv.csv' # TODO: Change this to overwrite data 
+csv_folder = '../data/test_crossbar_mnist_golden_results'        # TODO: Change this to overwrite data
 RESULTS_PATH = '../results'
 
 # Quantization Constants
@@ -176,7 +176,7 @@ else:
     print(f"Folder already exists: {csv_folder}")
 
 # Check whether output CSV file exists
-pwl_folder = "pwl_files"
+pwl_folder = os.path.join(spice_dir, "pwl_files")
 if not os.path.exists(pwl_folder):
     os.makedirs(pwl_folder)
     print(f"Created folder: {pwl_folder}")

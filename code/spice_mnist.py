@@ -50,8 +50,8 @@ For simplicity sake, we will only support a batch of 2, due to RAM limitations
 '''
 # ----------
 # START HYPERPARAMETERS
-RUN_NAME = 'spiking_mnist_golden_results'
-NUMBER_OF_IMAGES = 10000                          # Arbitrarily set the number of runs
+RUN_NAME = 'test_spiking_mnist_golden_results'
+NUMBER_OF_IMAGES = 4                          # Arbitrarily set the number of runs
 IMAGE_START_OFFSET = 0
 NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100
 DIGITAL_TIMESTEP = 5 * 10**-9

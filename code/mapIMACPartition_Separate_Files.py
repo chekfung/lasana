@@ -1,7 +1,7 @@
 #mapIMAC module connects the hidden layers and sets the configurations in the SPICE netlist
 import os
 from mapPartitionIMAC import *
-from tools_helper import *
+from tools_helper_imac import *
 
 """
 This script builds upon and extends work presented in the following publication:
@@ -148,7 +148,7 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
             
             for n in range(nodes[i]):
                 name = input_name.format(i, n+1)
-                filepath = os.path.join("../pwl_files", f"neuron_{i}_{n}_out.txt")
+                filepath = os.path.join("pwl_files", f"neuron_{i}_{n}_out.txt")
                 write_input_spike_file(f, f"v{n+1}", "first_net_not_used", name, filepath, 0, simulator='hspice', write_voltage_src=False, current_src=False)
 
                 things_to_probe.append(f"i(v{n+1})")
