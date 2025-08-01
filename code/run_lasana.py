@@ -121,7 +121,7 @@ if __name__ == "__main__":
     
     copy_folder_contents('../data/ml_inference_wrapper_intermediate_results', '../results/ml_inference_wrapper_intermediate_results')
 
-    exit()
+
     # ------------------------------------ #
 
     ## 3. Get timing / scaling information for LASANA spiking runtime
@@ -173,6 +173,15 @@ if __name__ == "__main__":
     print('\n\n---------------------------------------')
     print("Running Crossbar MNIST Comparison Script")
     run_python_files(['spice_versus_lasana_imac_comparison.py'])
+
+    # Move all the figures into a figures folder at the end
+    source_folder = '../results'
+    destination_folder = '../results/figures'
+    os.makedirs(destination_folder, exist_ok=True) 
+
+    for file in os.listdir(source_folder):
+        if file.endswith('.png'):
+            shutil.move(os.path.join(source_folder, file), os.path.join(destination_folder, file))
 
     # ------------------------------------ #
         
