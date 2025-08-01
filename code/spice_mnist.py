@@ -47,11 +47,17 @@ Once the last layer is reached we will take the spike outputs and generate the m
 compare that against the label.
 
 For simplicity sake, we will only support a batch of 2, due to RAM limitations
+
+Also note, on my machine, (i7-13700, 32GB Ram) it took 2404 hours to run the entire script, so it would be better to 
+run this on multiple machines, while splitting the number of images in parallel. One can change the image_start_offset and
+then go from there. 
+
+The logs for this are also impossiblly large (multiple TB), so note before running.
 '''
 # ----------
 # START HYPERPARAMETERS
 RUN_NAME = 'test_spiking_mnist_golden_results'
-NUMBER_OF_IMAGES = 4                          # Arbitrarily set the number of runs
+NUMBER_OF_IMAGES = 10000                          # Arbitrarily set the number of runs
 IMAGE_START_OFFSET = 0
 NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100
 DIGITAL_TIMESTEP = 5 * 10**-9

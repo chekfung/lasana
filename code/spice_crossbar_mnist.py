@@ -33,7 +33,7 @@ simulations, if such tools are available on whatever machine is being run.
 
 start = time.time()
 
-testnum=10000                                   # Number of input test cases to run
+testnum=10                                   # Number of input test cases to run
 testnum_per_batch=10                            # Number of test cases in a single batch, testnum should be divisible by this number
 firstimage=0                                    # start the test inputs from this image
 csv_name = '../data/test_crossbar_mnist_golden_acc_data.csv.csv' # TODO: Change this to overwrite data 
