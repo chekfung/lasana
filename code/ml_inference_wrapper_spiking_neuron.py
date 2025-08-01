@@ -38,7 +38,7 @@ MODEL_RUN_NAME = "spiking_neuron_run"
 CSV_NAME = 'spiking_neuron_dataset.csv'
 LIST_OF_COLUMNS_X = ["Run_Number", "Cap_Voltage_At_Input_Start", "Weight", "Input_Total_Time"]
 NEURON_PARAMS = ["V_sf", "V_adap", "V_leak", "V_rtr"]
-NUM_NEURONS = 20000      
+NUM_NEURONS = 20000        
 PERIOD = 5 * 10**-9  
 LOAD_IN_MLP_MODELS = True
 
@@ -214,10 +214,6 @@ for time_step_id in range (num_time_steps):
 
     answers_per_timestep = answers_per_timestep.sort_values(by=['Event_Type', "Run_Number"], ascending=[True, True])
     number_of_time_steps_answers[time_step_id] = answers_per_timestep
-
-    if time_step_id == 5:
-        print("Timestep trace for timestep 5")
-        print(answers_per_timestep)
 
     number_of_time_steps_leaks.append(leak)
     number_of_time_steps_spikes.append(spikes)

@@ -161,7 +161,7 @@ hyperparameters_mlp = {
 if DETERMINISTIC:
     hyperparameters_mlp['random_state'] = RANDOM_SEED
 
-mlp_model_save_name = "pcm_crossbar_mlp_dynamic_energy_11_9"
+mlp_model_save_name = "pcm_crossbar_mlp_dynamic_energy"
 mlp_y_pred, train_time, test_time = train_mlp_regression(X_train, X_test, X_val, np.ravel(y_train), np.ravel(y_test), np.ravel(y_val), hyperparameters_mlp, std_scaler, SAVE_MLP_MODEL, os.path.join(dataset_ml_models, mlp_model_save_name))
 baseline_metrics = calculate_metrics(y_test, mlp_y_pred)
 table.add_row(["MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)

@@ -120,7 +120,7 @@ table.add_row(["NN Interpolation", f"{train_time:.6f}", f"{test_time:.6f}"]+base
 print("Training Logistic Regression")
 logistic_y_pred, train_time, test_time = calculate_logistic_regression(X_train, X_test, X_val, y_train, y_test, y_val, std_scaler)
 baseline_metrics = calculate_binary_classification_metrics(y_test, logistic_y_pred)
-table.add_row(["Logistic Regression", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
+table.add_row(["OLS", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 # -------------------------
 # CatBoost

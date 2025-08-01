@@ -1,6 +1,7 @@
 import subprocess
 import sys
 import os
+import shutil
 
 '''
 Headless script for artifact analysis for MLCAD 2025.
@@ -54,6 +55,20 @@ def run_python_files(files, option=None, arg=None):
         except Exception as e:
             print(f"Error occurred while running {file}: {e}")
             
+def copy_folder_contents(src_folder, dst_folder):
+    if not os.path.exists(dst_folder):
+        os.makedirs(dst_folder)
+
+    for item in os.listdir(src_folder):
+        src_path = os.path.join(src_folder, item)
+        dst_path = os.path.join(dst_folder, item)
+
+        if os.path.isdir(src_path):
+            shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+        else:
+            shutil.copy2(src_path, dst_path)
+
+    print(f"Copied contents from {src_folder} to {dst_folder}")
 
 if __name__ == "__main__":
     # ------------------------------------ #
@@ -83,8 +98,12 @@ if __name__ == "__main__":
     print(f"Running the following files for PCM Crossbar Gain 30: [{python_files_pcm_crossbar}]")
     run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_30)
 
-    # TODO: I think that I will just move relevant files into the results folder.
-    # TODO: Create script that combines the two tables together and makes them pretty so it looks like the table that we had.
+    # Copy file contents of the ML models over
+    copy_folder_contents('../data/spiking_neuron_run/ml_models', '../results/spiking_neuron_ml_models')
+    copy_folder_contents('../data/pcm_crossbar_diff_10_run/ml_models', '../results/pcm_crossbar_diff_10_ml_models')
+    copy_folder_contents('../data/pcm_crossbar_diff_30_run/ml_models', '../results/pcm_crossbar_diff_30_ml_models')
+
+    
     
     # ------------------------------------ #
 
@@ -96,9 +115,13 @@ if __name__ == "__main__":
     print('\n\n---------------------------------------')
     run_python_files(['ml_inference_wrapper_spiking_neuron.py'], '--oracle')    # After run oracle
 
-    # TODO: Create script that combines the two tables together and makes them pretty for table III
-    # TODO: I think that I will just move relevant files into the results folder.
+    # Create table I and II and III from the paper and deposit in the results folder.
+    print(f"Creating Table I, II, III from the paper")
+    run_python_files(['create_table_i_ii_iii.py'])
+    
+    copy_folder_contents('../data/ml_inference_wrapper_intermediate_results', '../results/ml_inference_wrapper_intermediate_results')
 
+    exit()
     # ------------------------------------ #
 
     ## 3. Get timing / scaling information for LASANA spiking runtime
@@ -108,8 +131,6 @@ if __name__ == "__main__":
     print('\n\n---------------------------------------')
     print(f"Running Timing / Scaling experiments for the LASANA Spiking Neuron")
     run_python_files(['ml_inference_wrapper_spiking_neuron_timing.py'])
-
-    # TODO: I think that I will just move relevant files into the results folder.
 
     # ------------------------------------ #
 
