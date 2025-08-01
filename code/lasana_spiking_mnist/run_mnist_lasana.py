@@ -167,7 +167,6 @@ for images, labels in testloader:
         plt.show()
         exit()
         break  # Only show the first image
-
     
     spiking_event_layer_1 = np.zeros(128)
     spiking_event_layer_2 = np.zeros(10)
@@ -175,7 +174,6 @@ for images, labels in testloader:
 
     # Network Forward Pass
     for t in range(batch_num_timesteps):
-        #print(f"Batch: {current_batch} / {num_batches}, Timestep: {t} / {batch_num_timesteps}")
         spiking_event_layer_0 = spike_train[t, :] * INPUT_SCALING
         # Loop through each timestep
 
@@ -204,11 +202,9 @@ for images, labels in testloader:
     for i in range(real_batch_size):
         output_timesteps = batch_output[i*NUMBER_OF_TIMESTEPS_PER_INFERENCE:(i+1)*NUMBER_OF_TIMESTEPS_PER_INFERENCE, :]
         summed_guys = np.sum(output_timesteps, axis=0)
-        print(summed_guys)
         max_index = np.argmax(summed_guys)
 
         print(f"Batch: {current_batch}, Image: {i}, Predicted: {max_index}, Label: {labels[i]}")
-        #print(summed_guys)
         if max_index == labels[i]:
             batch_correct+=1
 
@@ -239,7 +235,7 @@ for images, labels in testloader:
     if total_img >= NUM_INFERENCES:
         break
 
-# Print full accuracies :)
+# Print full accuracies 
 total_acc = total_correct / total_img * 100
 print(f"LASANA Total Accuracy: {total_correct} / {total_img}, {total_acc:.2f}%") 
 

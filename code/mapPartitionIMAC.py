@@ -4,10 +4,27 @@ import random
 import numpy as np
 import resource
 import os
-import pandas as pd
-from collections import defaultdict
 
-# Quick Band Aid Fix to Make My Life a little easier :)
+"""
+This script builds upon and extends work presented in the following publication:
+
+Md Hasibul Amin, Mohammed E. Elbtity, and Ramtin Zand. 2023.
+IMAC-Sim: A Circuit-level Simulator For In-Memory Analog Computing Architectures.
+In Proceedings of the Great Lakes Symposium on VLSI 2023 (GLSVLSI '23),
+Association for Computing Machinery, New York, NY, USA, 659–664.
+https://doi.org/10.1145/3583781.3590264
+
+We acknowledge that most of the neural network structure, SPICE simulation framework,
+and core evaluation code in this file are derived from or adapted based on the
+IMAC-Sim framework presented in the above publication. All credit for the foundational
+SPICE code and in-memory analog computing simulation logic belongs to the original authors.
+
+We however, adapt the code to fit our own architectural paradigm and to get relevant statistics
+from the SPICE simulation. As such, this file as been provided to recreate the Crossbar SPICE
+simulations, if such tools are available on whatever machine is being run.
+"""
+
+# Quick Band Aid Fix to Make My Life a little easier 
 # Increase the number of files I can open at a time 
 soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
 print(f"Soft limit: {soft}")
@@ -54,7 +71,7 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
     layer1_wb = layer1+1 # number of bitcell in a row including weights and bias
 
     # Determine where vertical and horizontal partitions are (from IMAC Sim)
-    # NOTE: if [1,30, 58], the first partition is 1,29, and the second is 30, 57 :) as the top end is noninclusive.
+    # NOTE: if [1,30, 58], the first partition is 1,29, and the second is 30, 57  as the top end is noninclusive.
     horizontal_cuts = [1]
 
     n_hpar=1 # horizontal partition number
@@ -69,8 +86,6 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
                 c+=1
                 r=1
                 if (c == int(layer1_wb*n_hpar/hpar+min((layer1_wb%hpar)/n_hpar,1)+1)):
-                    #print("positive increase horizontal partition")
-                    #print(f"row: {r}, col: {c}")
                     n_hpar+=1
 
                     # Horizontal Partition Here
@@ -81,15 +96,14 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
     horizontal_cuts.append(layer1_wb+1)
     posw_r.close()
 
-    # Formally Print horizontal cuts :)
+    # Formally Print horizontal cuts 
     output = f"Horizontal partitions Layer: {LayerNUM}: "
     output += " | ".join(f"[{horizontal_cuts[i]}:{horizontal_cuts[i+1]-1}]" for i in range(len(horizontal_cuts) - 1))
     print(output)
     print(f"Difference: {np.diff(horizontal_cuts)}")
     print(f"Note: Last Horizontal Partition gets the bias line")
 
-    # Determine Vertical Partitions :)
-
+    # Determine Vertical Partitions 
     vertical_cuts = [1]
     
     # writing the circuit for vertical line parasitic resistances
@@ -116,19 +130,16 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
     print(f"Difference: {np.diff(vertical_cuts)}")
     print(f"Note: Each Vertical Guy gets own bias. Each Partition's initial wire connects to vdd")
 
-    # Open file descriptors for all possible things that we need to open (Each guy is xbar_length x 1) :)
+    # Open file descriptors for all possible things that we need to open (Each guy is xbar_length x 1) 
     # File descriptor named: partioned_layer_{layer_num}_{hpar}_{vpar}_{split_vpar}.sp
     # We split vpar since we have 32x1 based mac units.
     open_fd = {}    # Index into this using hpar, vpar, split_vpar index
 
-    #positive_weights = defaultdict(list)
-    #negative_weights = defaultdict(list)
-
     for x_id in range(hpar):
         for y_id in range(vpar):
-            # Vertical refers to having to split up input into multiple :)
+            # Vertical refers to having to split up input into multiple 
             # In our case, even though we will have the xbar_length x xbar_length, we will split to 32x1 for parallezability
-            # Get vertical cuts length :)
+            # Get vertical cuts length 
             new_range_low = vertical_cuts[y_id]
             new_range_high = vertical_cuts[y_id+1]
             new_range = (new_range_high - new_range_low)
@@ -137,10 +148,10 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
                 file_template = f"layer_{LayerNUM}_{x_id+1}_{y_id+1}_{split_vpar+1}.sp"
                 fd = open(os.path.join(spice_dir,file_template), "w")
 
-                # Write subcircuit definition :)
+                # Write subcircuit definition 
                 fd.write(f".SUBCKT layer_{LayerNUM}_{x_id+1}_{y_id+1}_{split_vpar+1}"+" vdd vss 0 ")
 
-                # Number of input and output in the circuit definition :)
+                # Number of input and output in the circuit definition 
                 for i in range(xbar_length):
                     fd.write("in%d "%(i+1))
                 
@@ -151,7 +162,7 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
                 open_fd[(x_id+1, y_id+1, split_vpar+1)] = fd    
 
     
-    # Open all the weights and bias files :)
+    # Open all the weights and bias files 
     posw_r=open(data_dir+'/'+'posweight'+str(LayerNUM)+".txt", "r") # read the positive line conductances
     negw_r=open(data_dir+'/'+'negweight'+str(LayerNUM)+".txt", "r")
     posb_r=open(data_dir+'/'+'posbias'+str(LayerNUM)+".txt", "r")
@@ -174,42 +185,34 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
                 high_resistance = float(line)
 
             if (r < layer2+1):
-                # Calculate Indices :) (Row is vertical partitioning, while column is vertical partitioning)
+                # Calculate Indices  (Row is vertical partitioning, while column is vertical partitioning)
                 y_id, split_r = find_partition(vertical_cuts, r)
                 x_id, split_c = find_partition(horizontal_cuts, c)
-                #print(f"Row: {r}, Col: {c}, X_ID: {x_id}, Y_ID: {y_id}, X_PAR: {split_c}, Y_PAR: {split_r}")
                 open_fd[(x_id, y_id, split_r)].write("Rwpos%d_%d in%d_%d sp%d_%d %f\n"% (split_c,split_r, split_c,split_r,split_c,split_r,float(line)))
-                #positive_weights[(x_id, y_id, split_r)].append(float(line))
 
-                #layer_w.write("Rwpos%d_%d_%d in%d_%d sp%d_%d %f\n"% (c,r, n_hpar, c,r,c,r,float(line)))
                 r+=1
             else:
                 c+=1
                 r=1
                 if (c == int(layer1_wb*n_hpar/hpar+min((layer1_wb%hpar)/n_hpar,1)+1)):
-                    #print("positive increase horizontal partition")
-                    #print(f"row: {r}, col: {c}")
                     n_hpar+=1
 
-                # Calculate Indices :) (Row is vertical partitioning, while column is vertical partitioning)
+                # Calculate Indices  (Row is vertical partitioning, while column is vertical partitioning)
                 y_id, split_r = find_partition(vertical_cuts, r)
                 x_id, split_c = find_partition(horizontal_cuts, c)
 
-                #print(f"Row: {r}, Col: {c}, X_ID: {x_id}, Y_ID: {y_id}, X_PAR: {split_c}, Y_PAR: {split_r}")
-
                 open_fd[(x_id, y_id, split_r)].write("Rwpos%d_%d in%d_%d sp%d_%d %f\n"% (split_c,split_r, split_c,split_r,split_c,split_r,float(line)))
-                #positive_weights[(x_id, y_id, split_r)].append(float(line))
-                #layer_w.write("Rwpos%d_%d_%d in%d_%d sp%d_%d %f\n"% (c,r,n_hpar, c,r,c,r,float(line)))
+
                 r+=1
         else:
             r+=1
     
     # Add the missing things to make it actually a Xbar_length x Xbar_length crossbar array (Note: for weight of 0, it is )
-    # Go through and write each of the files :)
+    # Go through and write each of the files 
     for key, file in open_fd.items():
         (x_id, y_id, split_r) = key
 
-        # Memristor ID to start on :)
+        # Memristor ID to start on 
         low_index = horizontal_cuts[x_id] - horizontal_cuts[x_id-1]+1
 
         # On last horizontal index, get rid of bias counting as one of the 32 inputs that we need to write.
@@ -223,7 +226,6 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
         for new_c in range(low_index, high_index+1):
             open_fd[(x_id, y_id, split_r)].write("Rwpos%d_%d in%d_%d 0 %f\n"% (new_c,split_r, new_c,split_r, low_resistance))
             #positive_weights[(x_id, y_id, split_r)].append(float(low_resistance))
-
 
     # Write Negative Array
     for key, file in open_fd.items():
@@ -241,34 +243,27 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
             if (r < layer2+1):
                 y_id, split_r = find_partition(vertical_cuts, r)
                 x_id, split_c = find_partition(horizontal_cuts, c)
-                #print(f"Row: {r}, Col: {c}, X_ID: {x_id}, Y_ID: {y_id}, X_PAR: {split_c}, Y_PAR: {split_r}")
                 open_fd[(x_id, y_id, split_r)].write("Rwneg%d_%d in%d_%d sn%d_%d %f\n"% (split_c,split_r,split_c,split_r,split_c,split_r,float(line)))
-                #negative_weights[(x_id, y_id, split_r)].append(float(line))
 
-                #layer_w.write("Rwneg%d_%d in%d_%d sn%d_%d %f\n"% (c,r,c,r,c,r,float(line)))
-                r+=1;
+                r+=1
             else:
-                c+=1;
-                r=1;
+                c+=1
+                r=1
                 if (c == int(layer1_wb*n_hpar/hpar+min((layer1_wb%hpar)/n_hpar,1)+1)):
                     n_hpar+=1
 
                 y_id, split_r = find_partition(vertical_cuts, r)
                 x_id, split_c = find_partition(horizontal_cuts, c)
-                #print(f"Row: {r}, Col: {c}, X_ID: {x_id}, Y_ID: {y_id}, X_PAR: {split_c}, Y_PAR: {split_r}")
                 open_fd[(x_id, y_id, split_r)].write("Rwneg%d_%d in%d_%d sn%d_%d %f\n"% (split_c,split_r,split_c,split_r,split_c,split_r,float(line)))
-                #negative_weights[(x_id, y_id, split_r)].append(float(line))
-
-                #layer_w.write("Rwneg%d_%d in%d_%d sn%d_%d %f\n"% (c,r,c,r,c,r,float(line)))
-                r+=1;
+                r+=1
         else:
-            r+=1;	
+            r+=1
     
     # Write the extras to pad to xbar_length x xbar_length
     for key, file in open_fd.items():
         (x_id, y_id, split_r) = key
 
-        # Memristor ID to start on :)
+        # Memristor ID to start on 
         low_index = horizontal_cuts[x_id] - horizontal_cuts[x_id-1]+1
 
         # On last horizontal index, get rid of bias counting as one of the 32 inputs that we need to write.
@@ -281,10 +276,8 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
 
         for new_c in range(low_index, high_index+1):
             open_fd[(x_id, y_id, split_r)].write("Rwneg%d_%d in%d_%d 0 %f\n"% (new_c,split_r, new_c,split_r, low_resistance))
-            #negative_weights[(x_id, y_id, split_r)].append(float(low_resistance))
 
-
-    # Write 0 bias numbers for partitions where there is nothing happening :)
+    # Write 0 bias numbers for partitions where there is nothing happening 
     for i in range(hpar-1):
         for y_id in range(vpar):
             vpar_index = y_id+1
@@ -296,11 +289,9 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
             for split_vpar in range(new_range):
                 open_fd[(i+1, vpar_index, split_vpar+1)].write("\n\n**********Zero Positive Biases**********\n")
                 open_fd[(i+1, vpar_index, split_vpar+1)].write("Rbpos%d vd%d sp%d_%d %f\n"% (1,1,xbar_length+1,split_vpar+1, low_resistance))
-                #positive_weights[(i+1, vpar_index, split_vpar+1)].append(float(low_resistance))
 
                 open_fd[(i+1, vpar_index, split_vpar+1)].write("\n\n**********Zero Negative Biases**********\n")
                 open_fd[(i+1, vpar_index, split_vpar+1)].write("Rbneg%d vd%d sn%d_%d %f\n"% (1,1,xbar_length+1,split_vpar+1,low_resistance))
-                #negative_weights[(i+1, vpar_index, split_vpar+1)].append(float(low_resistance))
                 
 
     # Biases need to be written for every vertical partition, but only for the last horizontal partition
@@ -319,8 +310,6 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
 
             if (float(line) != 0):
                 open_fd[(hpar, vpar_index, split_vpar+1)].write("Rbpos%d vd%d sp%d_%d %f\n"% (1,1,xbar_length+1,split_vpar+1,float(line)))
-                #positive_weights[(hpar, vpar_index, split_vpar+1)].append(float(line))
-
 
             # Write negative bias
             open_fd[(hpar, vpar_index, split_vpar+1)].write("\n\n**********Negative Biases**********\n")
@@ -329,20 +318,6 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
 
             if (float(line) != 0):
                 open_fd[(hpar, vpar_index, split_vpar+1)].write("Rbneg%d vd%d sn%d_%d %f\n"% (1,1,xbar_length+1,split_vpar+1,float(line)))
-               # negative_weights[(hpar, vpar_index, split_vpar+1)].append(float(line))
-
-    # # Create weights and biases file :)
-    # df1 = pd.DataFrame.from_dict(positive_weights, orient='index')
-    # df2 = pd.DataFrame.from_dict(negative_weights, orient='index')
-
-    # # Calculate the difference and apply np.sign to get -1, 0, or 1
-    # weights = np.sign(df2.values - df1.values)
-
-    # # Create a new DataFrame with the same index and column structure
-    # weights_df = pd.DataFrame(weights, index=df1.index, columns=[f'index_{i}' for i in range(df1.shape[1])])
-
-    # # Export to CSV
-    # weights_df.to_csv(f"weights_output_{LayerNUM}.csv")
 
     # writing the circuit for vertical line parasitic resistances (only one vertical line for each row BTW)
     parasitic_res = rho_new*W/(metal*T)
@@ -398,12 +373,11 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
         # Write end of the guy
         file.write(f".ENDS layer_{LayerNUM}_{x_id}_{y_id}_{split_r}")
 
-    # Close All File Descriptors :)
+    # Close All File Descriptors 
     posw_r.close()
     negw_r.close()
     posb_r.close()
     negb_r.close()
-
 
     # Close all other file descriptors
     # Close all file descriptors
@@ -415,55 +389,3 @@ def mapPartition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar,metal,T,H,L,W,D,
             print(f"Error closing {key}: {e}")
 
     return (horizontal_cuts, vertical_cuts, open_fd.keys())
-
-    # TODO: IN THE NEAR FUTURE, I THINK IT WOULD MAKE SENSE TO PUT A JSON FILE TO KEEP TRACK OF HOW THINGS ARE SPLIT, WHO HAS HOW MANY INPUTS, AND EVERYTHING SO IT IS
-    #       EASY IN THE FUTURE TO JOIN EVERYTHING TOGETHER.
-
-            
-
-# -------------
-# Test Function
-# Layer 3
-# layer_num = 3
-# input_layer = 84
-# output_layer = 10
-# xbar_length = 32
-# hpar = 3
-# vpar = 1
-# metal = 2.69999999997e-8
-# T = 2.2e-8
-# H = 2e-8
-# L = 1.35e-7
-# W = 1.08e-7
-# D = 4.5e-8
-# eps = 1.77079999999e-10
-# rho = 1.9e-8
-# weight_var = 0
-# data_dir = 'data'
-# spice_dir = 'test_spice'
-
-# # Layer 2
-# layer_num = 2
-# input_layer = 120
-# output_layer = 84
-# xbar_length = 32
-# hpar = 4
-# vpar = 3
-# metal = 2.69999999997e-8
-# T = 2.2e-8
-# H = 2e-8
-# L = 1.35e-7
-# W = 1.08e-7
-# D = 4.5e-8
-# eps = 1.77079999999e-10
-# rho = 1.9e-8
-# weight_var = 0
-# data_dir = 'data'
-# spice_dir = 'test_spice_layer_2'
-
-
-
-# # Run
-# mapPartition(input_layer,output_layer, xbar_length, layer_num,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,data_dir,spice_dir)
-
-#Horizontal is 3, vertical is 1

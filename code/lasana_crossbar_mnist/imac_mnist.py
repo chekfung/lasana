@@ -17,7 +17,7 @@ random.seed(42)
 # ------ BEGIN Hyperparameters -------
 testnum=500                                                                 # Number of input test cases to run
 testnum_per_batch=10                                                        # Number of test cases in a single batch, testnum should be divisible by this number
-firstimage=0                                                                # start the test inputs from this image\
+firstimage=0                                                                # start the test inputs from this image
 csv_name = '../../data/crossbar_mnist_lasana_acc_data.csv'                  # Refers to top CSV for high level acc and energy (where to save files)
 csv_folder = '../../data/crossbar_mnist_lasana_results'                     # Per analog block energy, latency, etc. logs (where to save files)
 SAVE_ACC_PATH = '../../results/crossbar_mnist_lasana_spice_comparison'      # Where to save the 
@@ -130,7 +130,6 @@ def layer_partition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar, data_dir):
     print(f"Note: Last Horizontal Partition gets the bias line")
 
     # Determine Vertical Partitions :)
-
     vertical_cuts = [1]
     
     # writing the circuit for vertical line parasitic resistances
@@ -163,9 +162,8 @@ def layer_partition(layer1,layer2, xbar_length, LayerNUM,hpar,vpar, data_dir):
 
     for x_id in range(hpar):
         for y_id in range(vpar):
-            # Vertical refers to having to split up input into multiple :)
+            # Vertical refers to having to split up input into multiple 
             # In our case, even though we will have the xbar_length x xbar_length, we will split to 32x1 for parallezability
-            # Get vertical cuts length :)
             new_range_low = vertical_cuts[y_id]
             new_range_high = vertical_cuts[y_id+1]
             new_range = (new_range_high - new_range_low)
@@ -192,7 +190,7 @@ def determine_layer_partitions(nodes, xbar_length, hpar, vpar):
 
 def load_weights_and_bias(layer_num, layers, layer_cuts, xbar_length):
     # Loads in weights and biases (in np array) based on the layer partition dictionary so easy to add in everything 
-    #       when running :)
+    #       when running 
     # Get weights, (layer2, by layer 1, so each row is output
     weights = pd.read_csv(os.path.join(data_dir, f"W{layer_num}.csv"), header=None).to_numpy()
     transposed_weights = weights.transpose()
@@ -206,7 +204,7 @@ def load_weights_and_bias(layer_num, layers, layer_cuts, xbar_length):
         # Get how things are cut
         hor_cut, vert_cut = layer_cuts[layer_num]
         # Start and end
-        # Calculate input ranges :)
+        # Calculate input ranges 
         low_range_x = hor_cut[x_id-1]
         high_range_x = hor_cut[x_id]
 
@@ -217,19 +215,13 @@ def load_weights_and_bias(layer_num, layers, layer_cuts, xbar_length):
         low_range_y = vert_cut[y_id-1]
         global_y_value = (low_range_y - 1) + split_r
         
-        #print(f"Y: {global_y_value-1}, X: [{low_range_x-1}:{high_range_x-1}]")
         partitioned_weights_and_biases[index, :high_range_x-low_range_x] = transposed_weights[global_y_value-1, low_range_x-1:high_range_x-1]
-        #print(x_id, y_id, split_r, cool_weights.shape)
 
         # Find biases
         if x_id == len(hor_cut)-1:
             partitioned_weights_and_biases[index, 32] = biases[global_y_value-1, 0]
             
         index+=1
-
-    # for i in range(len(layers[layer_num])):
-    #     x_id, y_id, vpar = layers[layer_num][i]
-    #     print(f"x_id:{x_id}, y_id: {y_id}, vpar: {vpar}, {partitioned_weights_and_biases[i, :]}")
 
     return partitioned_weights_and_biases
 
@@ -249,8 +241,6 @@ def load_data(input_array, layer_num, layer, layer_cuts, xbar_length):
         if x_id == len(hor_cut)-1:
             high_range_x -= 1
 
-        # print(x_id, y_id, split_r)
-        # print(low_range_x, high_range_x)
         lasana_input_array[index, :high_range_x-low_range_x] = input_array[low_range_x-1:high_range_x-1]
 
         index +=1
@@ -345,7 +335,7 @@ for i in range(num_batches):
     layer2_crossbar = CrossBar(len(layers[2]), layer_weights[2], e_model_30, l_model_30, e_static_model_30, behavior_model_30, tsampling*10**-9)
     layer3_crossbar = CrossBar(len(layers[3]), layer_weights[3], e_model_10, l_model_10, e_static_model_10, behavior_model_10, tsampling*10**-9)
 
-    # Setup all the neurons :)
+    # Setup all the neurons 
     layer1_neurons = DigitalNeuron(nodes[1], None, None, None, None, tsampling*10**-9)
     layer2_neurons = DigitalNeuron(nodes[2], None, None, None, None, tsampling*10**-9)
     layer3_neurons = DigitalNeuron(nodes[3], None, None, None, None, tsampling*10**-9)
@@ -360,12 +350,10 @@ for i in range(num_batches):
         image_writer = csv.writer(per_inference_fd)
         image_writer.writerow(per_circuit_header)
 
-        #print(f"Image: {real_image_id}")
         is_final_input_of_batch = (j == (testnum_per_batch-1))
 
         # Run Layer 1
         layer1_input = load_data(input_data[real_image_id, :], 1, layers, layer_cuts, xbar[0])
-        #print(layer1_input)
 
         # Call CrossBar Layer
         layer1_crossbar_output, layer1_crossbar_latency, layer1_crossbar_energy, layer1_crossbar_last_outputs = layer1_crossbar.step(j, layer1_input, is_final_input_of_batch)
@@ -384,13 +372,11 @@ for i in range(num_batches):
 
         # Combine Horizontal Outputs Together
         layer1_crossbar_output_coalesced = combine_horizontal_partition_outputs(layer1_crossbar_output, 1, nodes[1], layers, layer_cuts)
-        #print(layer1_crossbar_output_coalesced)
 
         if USE_QUANTIZATION:
             layer1_crossbar_output_coalesced = dac(adc(layer1_crossbar_output_coalesced, bits=DAC_BITS), bits=DAC_BITS)
 
         # Run Activation Layer 1
-        #print("Layer1 Neuron Output")
         layer1_neuron_output, layer1_neuron_latency, layer1_neuron_energy, layer1_neuron_last_outputs = layer1_neurons.step(j, layer1_crossbar_output_coalesced, is_final_input_of_batch)
         energy_consumed += layer1_neuron_energy.sum()
 
@@ -420,7 +406,6 @@ for i in range(num_batches):
                 layer2_crossbar_last_outputs[p][0]
             ]
             image_writer.writerow(row)
-
 
         # Combine Horizontal Outputs Together
         layer2_crossbar_output_coalesced = combine_horizontal_partition_outputs(layer2_crossbar_output, 2, nodes[2], layers, layer_cuts)
@@ -478,10 +463,8 @@ for i in range(num_batches):
             row = [neuron_name, layer3_neuron_latency[k], layer3_neuron_energy[k], layer3_neuron_output[k], layer3_neuron_last_outputs[k][0]]
             image_writer.writerow(row)
 
-        #print(layer3_neuron_output)
         predicted_label = np.argmax(layer3_neuron_output)
         real_label = np.argmax(labels[real_image_id, :])
-
 
         row = [real_image_id] + [real_label] + [predicted_label] + [energy_consumed* 10**-12] + list(layer3_neuron_output)
         writer.writerow(row)

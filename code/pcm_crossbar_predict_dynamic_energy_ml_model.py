@@ -61,7 +61,7 @@ plt.title("Energy")
 if PLOT_MATPLOTLIB_FIGS:
     plt.show()
 
-# Runwise train test split :)
+# Runwise train test split 
 train_df, test_df, val_df = runwise_train_test_split(data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
 X_train = train_df[LIST_OF_COLUMNS_X_MAC]
 y_train = train_df[["Energy"]]
@@ -169,7 +169,6 @@ print("Trained MLP Model")
 
 
 # Generate Scatter Plots
-
 plt.figure(figure_counter)
 figure_counter+=1    
 plt.scatter(cat_y_pred, y_test, marker='x', linewidth=2)

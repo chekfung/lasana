@@ -21,19 +21,17 @@ matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 figure_counter = 0
 
-# Loading MNIST Dataset through PyTorch :)
+# Loading MNIST Dataset through PyTorch 
 import torch
 import dill
 import torchvision
 import torchvision.transforms as transforms
+import time
 
 # Make sure all seeds are the same
 torch.manual_seed(42)
 np.random.seed(42)
 random.seed(42)
-
-# Multiprocessing Semaphore so that layer0 does not cause OOM errors :)
-#semaphore = multiprocessing.Semaphore(2)
 
 '''
 spice_mnist.py is a file created to run through the entire MNIST test set as a comparison to the trained LASANA models.
@@ -48,37 +46,37 @@ and then create the next spike train to the next layer. The next layer would the
 Once the last layer is reached we will take the spike outputs and generate the maxpool of spikes to determine what spiked, and
 compare that against the label.
 
-For simplicity sake, we will only support a batch of 1, and in the future, may support larger scale operations to parallelize everything
+For simplicity sake, we will only support a batch of 2, due to RAM limitations
 '''
 # ----------
 # START HYPERPARAMETERS
-RUN_NAME = 'SPICE_MNIST_4000_4999'
-NUMBER_OF_IMAGES = 1000                          # Arbitrarily set the number of runs
-IMAGE_START_OFFSET = 4000
+RUN_NAME = 'spiking_mnist_golden_results'
+NUMBER_OF_IMAGES = 10000                          # Arbitrarily set the number of runs
+IMAGE_START_OFFSET = 0
 NUMBER_OF_TIMESTEPS_PER_INFERENCE = 100
 DIGITAL_TIMESTEP = 5 * 10**-9
 SIM_MIN_STEP_SIZE_NS = 0.01                     # Min Step Size nanoseconds of the simulation 
-BATCH_SIZE = 2              # Seems like we are limited to 2 since RAM limited :)
-NUM_PROCESSES = min(BATCH_SIZE, 10)             # Max num processes at 10 :), but otherwise set as batch_size
+BATCH_SIZE = 2              # Seems like we are limited to 2 since RAM limited 
+NUM_PROCESSES = min(BATCH_SIZE, 10)             # Max num processes at 10 , but otherwise set as batch_size
 MAX_IMAGE_ID = NUMBER_OF_IMAGES + IMAGE_START_OFFSET -1 
 RUN_SPICE_SIMULATION = True
-GLOBAL_PLOT_RUNS = False
+PLOT_RUNS = False
 
 # Pytorch MNIST information
-PYTORCH_MODEL_FILE = 'LASANA_applications/mnist.pt'
+PYTORCH_MODEL_FILE = '../data/spiking_mnist_model.pt'
 WEIGHT_SCALING = 1                         # Scaling of weights (to account for leak) [NOTE: Does not include first layer (as there are no weights)]
 INPUT_SCALING = 2                          # Scaling of inputs between layers (note that input scaling implicitly affects weight scaling since weight scaling is applied first, then input scaling)
 
 # Calculated Hyperparams
 TOTAL_TIME_NS = DIGITAL_TIMESTEP * NUMBER_OF_TIMESTEPS_PER_INFERENCE * 10**9
 
-NUM_INPUT_POINTS = TOTAL_TIME_NS*10                         # Get sampling frequency, out of this, but only used for spike generation fidelity as well as how big PWL file is :)
+NUM_INPUT_POINTS = TOTAL_TIME_NS*10                         # Get sampling frequency, out of this, but only used for spike generation fidelity as well as how big PWL file is 
 POINTS_PER_DIGITAL_TIMESTEP = int(NUM_INPUT_POINTS / NUMBER_OF_TIMESTEPS_PER_INFERENCE)
 INPUT_SEPARATE_VDD = True
 SIMULATOR = 'spectre'
-VDD = 1.5           # This should be 1.5V for DAC 2025 submission
+VDD = 1.5          
 VSS = 0
-SPIKING_INPUT = True                            # Determines if there is spiking input :)
+SPIKING_INPUT = True                            # Determines if there is spiking input 
 NUMBER_OF_INPUTS = 1
 NUMBER_OF_WEIGHTS = 1
 LOAD_CAPACITANCE = 500 * 10**(-15)                                # Farads    
@@ -89,38 +87,37 @@ INPUT_NET = ['spikes']                                            # Name of inte
 KNOB_PARAMS = {"V_sf": 0.5, "V_adap": 0.5, "V_leak": 0.57, "V_rtr": 0.5}
 
 # For example, Cout, spk -> Cout spk VSS xF     (Cout is the name, spk is the pos connection, VSS is the neg connection, and xF is the capacitance)
-OUTPUT_CAPACITANCE_NAME = 'Cout'                                  # Capacitance Name (Requires C in front) Corresponds to input nets :)
-OUTPUT_LOAD_CAP_NET = 'spk'                                       # Name of interconnected load net Corresponds to input nets :)
+OUTPUT_CAPACITANCE_NAME = 'Cout'                                  # Capacitance Name (Requires C in front) Corresponds to input nets 
+OUTPUT_LOAD_CAP_NET = 'spk'                                       # Name of interconnected load net Corresponds to input nets 
 
 # Circuit Definition to run
-#SUBCIRCUIT_DEFINITION = f'X1 {INPUT_NET[0]} leak sf rtr adap {OUTPUT_LOAD_CAP_NET} vdd 0 lif_neuron'
 SUBCIRCUIT_FORMAT = 'X{} {} {} {} {} {} {} {} 0 lif_neuron'
 # Model SPICE Filepath
 # Neuron Model File Locations
-MODEL_FILEPATH = '../spiking_neuron_models/spice/analog_lif_neuron_2_6_2025.sp'
+MODEL_FILEPATH = '../data/spiking_neuron_spice_files/analog_lif_neuron.sp'
 OTHER_NECESSARY_FILES_IN_SPICE_RUN_DIRECTORY = []
-LIBRARY_FILES = ['../spiking_neuron_models/libraries/45nm_LP.pm']
-OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint :)
+LIBRARY_FILES = ['../data/spiking_neuron_spice_files/libraries/45nm_LP.pm']
+OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint 
 
 PLOT_SPIKE_BOUNDS = False
 
 if SIMULATOR == 'spectre':
-    SPICE_FOOTPRINT_FILE = '../spiking_neuron_models/spice/analog_lif_neuron_playground_spectre_larger_width_reset.sp'
+    SPICE_FOOTPRINT_FILE = '../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp'
     SPIKE_START = 306
     SPIKE_END = 361
 
 # END OF HYPERPARAMETERS
 # -----------------
-# Create all necessary I/O filepath stuff :)
+# Create all necessary I/O filepath 
 
 # Simulator detection
 sim_str = idiot_proof_sim_string(SIMULATOR)
 assert(is_simulator_real(sim_str))
 
-PWL_FILE_TEMPLATE = RUN_NAME + "_" + "pwl_file_img{}_l{}_n{}.txt"       # First one referes to run number, second is input net connection :)
+PWL_FILE_TEMPLATE = RUN_NAME + "_" + "pwl_file_img{}_l{}_n{}.txt"       # First one referes to run number, second is input net connection 
 
 # File IO to create directory structure for run
-RUN_DIRECTORY = os.path.join('logs', RUN_NAME)
+RUN_DIRECTORY = os.path.join('../data', RUN_NAME)
 CSV_DIRECTORY = os.path.join(RUN_DIRECTORY, 'event_csvs')
 LIBRARIES_DIRCTORY = os.path.join(RUN_DIRECTORY, 'libraries')
 PWL_FILE_MAIN_DIRECTORY = os.path.join(RUN_DIRECTORY, "pwl_files")
@@ -135,7 +132,7 @@ if not os.path.exists(PWL_FILE_MAIN_DIRECTORY):
 FILENAME = os.path.basename(MODEL_FILEPATH)
 LOCAL_SPICE_MODEL_FILEPATH = os.path.join(SPICE_RUN_DIRECTORY, FILENAME)
 
-# Make directories :)
+# Make directories 
 if not os.path.exists(CSV_DIRECTORY):
     os.makedirs(CSV_DIRECTORY)
 
@@ -161,7 +158,7 @@ for library_filepath in LIBRARY_FILES:
     shutil.copyfile(library_filepath, lib_destination_file)
 
 # ----------------
-# Get spike footprint :)
+# Get spike footprint 
 total_sim_time_s = TOTAL_TIME_NS * 10**(-9)
 sampling_period = total_sim_time_s / NUM_INPUT_POINTS
 sampling_frequency = 1 / sampling_period
@@ -174,7 +171,7 @@ print(f"Total Charge of Spike, weight 1: {FOOTPRINT_CHARGE}".format())
 print("Peak Amplitude of One Guy: {}".format(np.max(SPIKE_FOOTPRINT)))
 print("NUMBER OF SPIKE POINTS: {}".format(SPIKE_FOOTPRINT.shape[0]))
 
-# Load MNIST Dictionary and Model Weights :)
+# Load MNIST Dictionary and Model Weights 
 transform = transforms.Compose([transforms.ToTensor()])
 testset = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform)
 subset_testset = torch.utils.data.Subset(testset, range(IMAGE_START_OFFSET, min(len(testset), MAX_IMAGE_ID+1)))
@@ -192,8 +189,7 @@ for param_name, param in mnist_model.named_parameters():
 
 # ------- END HYPERPARAMETERS -------------
 
-
-# Important helper function :)
+# Important helper function 
 def poisson_spike_train(image, timesteps):
     """
     Converts an image batch into Poisson spike trains.
@@ -213,7 +209,7 @@ def poisson_spike_train(image, timesteps):
 
     return spike_train.float()
 
-# Supporting code for layer generation given that we know what all the inputs are :)
+# Supporting code for layer generation given that we know what all the inputs are 
 def create_layer_file(num_inputs, image_id, layer_id, spice_model_fd, PWL_FILE_TEMPLATE, subcircuit_template, KNOB_PARAMS, VDD, VSS, SIMULATOR='spectre'):
     # Get filepath for output file based on current_sim_runs
     fn, fn_ext = os.path.splitext(os.path.basename(spice_model_fd))
@@ -225,9 +221,9 @@ def create_layer_file(num_inputs, image_id, layer_id, spice_model_fd, PWL_FILE_T
         for line in infile:
             outfile.write(line)
 
-        # Setup voltages and currents to probe :)
-        # NOTE: Voltage probes use NET NAME; current probes use COMPONENT NAME :)
-        # FIXME: In the future, I should definitely make it easier to do this :)
+        # Setup voltages and currents to probe 
+        # NOTE: Voltage probes use NET NAME; current probes use COMPONENT NAME 
+        # In the future, I should definitely make it easier to do this 
         voltage_probes = []
         current_probes = []
 
@@ -239,7 +235,7 @@ def create_layer_file(num_inputs, image_id, layer_id, spice_model_fd, PWL_FILE_T
             voltage_probes.append(f'v(vdd_{neuron_idx})')
             current_probes.append(f'i(Vdd_{neuron_idx})')
 
-            # Create Knobs (to make sure every neuron is separate :))
+            # Create Knobs (to make sure every neuron is separate )
             # Note: actual net_name is like V_leak -> leak_1
             for k in KNOB_PARAMS:
                 netlist_name = k + f"_{neuron_idx}"
@@ -265,8 +261,6 @@ def create_layer_file(num_inputs, image_id, layer_id, spice_model_fd, PWL_FILE_T
             write_line_with_newline(outfile, subcircuit_str)
             voltage_probes.append(f"v(input_{neuron_idx})")
 
-
-
         # Add Simulation Transient Analysis
         analysis = f".tran {SIM_MIN_STEP_SIZE_NS}ns {TOTAL_TIME_NS}ns 0 1ns"
         write_line_with_newline(outfile, analysis)
@@ -284,7 +278,7 @@ def create_layer_file(num_inputs, image_id, layer_id, spice_model_fd, PWL_FILE_T
 def generate_fully_connected_spike_train(layer_num_neurons, NUMBER_OF_TIMESTEPS_PER_INFERENCE, spike_data_df, weights, WEIGHT_SCALING, INPUT_SCALING):
     layer_spiketrain = np.zeros((NUMBER_OF_TIMESTEPS_PER_INFERENCE, layer_num_neurons))
 
-    # Provides per timestep dict of which neurons spiked :)
+    # Provides per timestep dict of which neurons spiked 
     spikes_per_timestep = spike_data_df.groupby('Digital_Time_Step')['Neuron_Num'].apply(list).to_dict()
 
     for t in spikes_per_timestep:
@@ -292,15 +286,15 @@ def generate_fully_connected_spike_train(layer_num_neurons, NUMBER_OF_TIMESTEPS_
         neuron_ids = spikes_per_timestep[t]
 
         for id in neuron_ids:
-            # Go through each neuron that spiked and add for next timestep :)
+            # Go through each neuron that spiked and add for next timestep 
             if t+1 < NUMBER_OF_TIMESTEPS_PER_INFERENCE:
                 layer_spiketrain[t+1,:] += (weights[:,id] * WEIGHT_SCALING)
         
-    # Apply Input Scaling :)
+    # Apply Input Scaling 
     layer_spiketrain = layer_spiketrain * INPUT_SCALING
     return layer_spiketrain
 
-# TODO: Currently supported only with the Indiveri 2003 Neuron :)
+# Currently supported only with the Indiveri 2003 Neuron 
 def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_timesteps, one_time_period, FOOTPRINT_CHARGE, param_knobs, raw_time, raw_input_spikes, raw_circuit_state, raw_output_spikes, raw_vdd, raw_vdd_current, VERBOSE=False, PLOT_RUNS=False, INPUT_WELL_DEFINED=True, SIMULATOR='spectre'):
     OUTPUT_SPIKE_THRESHOLD = 1 * 10**-6      # use this value to determine if a trace has any spikes (i.e. if nothing above 1 uA, then no spike in whole thing)
     global figure_counter 
@@ -335,7 +329,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
 
     out_mask = output_spikes > OUTPUT_SPIKE_THRESHOLD
 
-    # Remove Drift :)
+    # Remove Drift 
     z = baseline_als(output_spikes, 10000, 0.01)
     filtered_output = output_spikes-z
     
@@ -357,7 +351,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
     gradient_spike_mask = get_gradient_where_spike(output_spikes, output_gradients, time_vec)
     combine_all_masks = out_mask & gradient_spike_mask   
 
-    #Plot everything right now with the timestep bounds :)
+    #Plot everything right now with the timestep bounds 
     if PLOT_RUNS:
         plt.figure(figure_counter)
         figure_counter+=1
@@ -375,7 +369,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
 
     timesteps_without_events = 0
 
-    # Ok, we are going to loop through each of the timesteps now :)
+    # Ok, we are going to loop through each of the timesteps now 
     for j in range(number_of_timesteps):
         start_of_timestep = j * one_time_period
         end_of_timestep = (j + 1) * one_time_period
@@ -391,9 +385,9 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
         # Fix the end index to be plus one (so that we slightly overlap things.)
         start_index = valid_timestep_indices[0][0]  
         end_index = valid_timestep_indices[0][-1]+1
-        end_index = np.min([end_index, len(time_vec)-1])      # Join the end of the index with the start of the new guy :)
+        end_index = np.min([end_index, len(time_vec)-1])      # Join the end of the index with the start of the new guy 
 
-        # Continue writing on that plot to show where these things are :)
+        # Continue writing on that plot to show where these things are 
         if PLOT_RUNS:
             #plt.axvline(start_of_timestep*10**9, color='black')
             plt.axvline(time_vec[start_index]*10**9, color='pink')
@@ -438,12 +432,10 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
                     timing_event[knob] = knob_value
 
                 events_list.append(timing_event)
-                
-                #print(param_knobs)
+
                 if VERBOSE:
                     print(f"Timing Event {timing_event_start_index}:{timing_event_end_index}")
                 
-
             # After processing the timing events, if it exists, now we can process the spike event.
             timesteps_without_events = 0
 
@@ -451,7 +443,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
             if VERBOSE:
                 print(f"Spike Event Timestep: {start_index}:{end_index}")
 
-            # Get the peak index for the spike for latency calculations :)
+            # Get the peak index for the spike for latency calculations 
             spike_peak_index = np.argmax(np.abs(input_spikes[input_start_spike_index:input_end_spike_index+1])) + input_start_spike_index # Note: make sure to plus one to include input_end_spike_index in there
 
             plt.axvline(time_vec[input_start_spike_index]*10**9, color='blue')
@@ -471,9 +463,8 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
             spike_charge =  np.trapz(input_spikes[input_start_spike_index:input_end_spike_index+1], time_vec[input_start_spike_index:input_end_spike_index+1])
             spike_event["Input_Peak_Amplitude"] = input_spikes[spike_peak_index]
             spike_event["Input_Total_Charge"] = spike_charge
-            spike_event["Input_Total_Time"] = (timesteps_without_events+1) * one_time_period   # Need to include all of 124 inside of 124, since no step 125 :)
+            spike_event["Input_Total_Time"] = (timesteps_without_events+1) * one_time_period   # Need to include all of 124 inside of 124, since no step 125 
             spike_event["Weight"] = spike_charge / footprint_spike_charge       
-            #print(f"Spike Event: Run: {i}, Timestep: {j}, Weight: {spike_charge / footprint_spike_charge}")
 
             # I/O
             spike_event["Cap_Voltage_At_Input_Start"] = circuit_state[start_index]
@@ -485,16 +476,12 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
                 knob_value = param_knobs[knob]
                 spike_event[knob] = knob_value
 
-
             # Is there an output spike in the same timestep? 
             output_spike_found, output_start_index = identify_if_output_spike(combine_all_masks, output_mask, start_index, end_index,j)
             if VERBOSE:
                 print(f"Output Spike?: {output_spike_found}")
 
             if output_spike_found:
-                #output_spike_peak = np.argmax(output_spikes[start_index:end_index+1]) + start_index
-                #assert(output_spike_peak > spike_peak_index)
-
                 if output_start_index < start_index:
                     # Not real spike :()
                     event_type = 'in-no_out'
@@ -503,17 +490,13 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
                     print(f"WARNING: NOT A REAL SPIKE :o AT RUN: {i}, TIMESTEP: {j}")
 
                 elif output_start_index == start_index:
-                    # Real spike, but I will just move it over a little bit so it is not something crazy :)
-                    #event_type = 'in-out'
-                    #output_spike_peak+=4
-                    #latency = time_vec[output_spike_peak] - time_vec[spike_peak_index]
                     event_type='in-no_out'
                     latency=0
 
                     print(f"WARNING: SPIKE SAME INDICES AT RUN: {i}, TIMESTEP: {j}")
 
                 else:
-                    # Anything else :)
+                    # Anything else 
                     latency = time_vec[output_start_index] - time_vec[start_index]
                     event_type = 'in-out'
 
@@ -524,7 +507,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
                 latency = 0
                 event_type = 'in-no_out'
 
-            # These two are dependent on if we have a spike or not :)
+            # These two are dependent on if we have a spike or not 
             spike_event["Event_Type"] = event_type
             spike_event['Latency'] = latency
 
@@ -533,12 +516,12 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
         else:
             # If spike not found, we need to check if this is the last timestep. If so, we need to make a timing event for this last timestep or more (significant leakage events)
             if j == number_of_timesteps - 1:
-                # If last timestep, but no spike, we need to evaluate this as a timing event :)
+                # If last timestep, but no spike, we need to evaluate this as a timing event 
                 timestep_since_last_spike = (j - timesteps_without_events) * one_time_period
 
                 timing_event = {}
                 timing_event_start_index = np.where(time_vec >= timestep_since_last_spike)[0][0]
-                timing_event_end_index = end_index # Note: This is end index because there is no event, we process this timing event all the way to the end :)
+                timing_event_end_index = end_index # Note: This is end index because there is no event, we process this timing event all the way to the end 
                 if VERBOSE:
                     print(f"Timing Event Length: {len(time_vec)}, End Index: {end_index}")
 
@@ -551,7 +534,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
                 timing_event["Digital_Time_Step"] = j
                 timing_event["Input_Peak_Amplitude"] = 0
                 timing_event["Input_Total_Charge"] = 0
-                timing_event["Input_Total_Time"] = (timesteps_without_events+1) * one_time_period   # Need to include all of 124 inside of 124, since no step 125 :)
+                timing_event["Input_Total_Time"] = (timesteps_without_events+1) * one_time_period   # Need to include all of 124 inside of 124, since no step 125 
                 timing_event["Weight"] = 0
                 timing_event["Cap_Voltage_At_Input_Start"] = circuit_state[timing_event_start_index]
                 timing_event["Cap_Voltage_At_Output_End"] = circuit_state[timing_event_end_index]
@@ -565,7 +548,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
 
                 events_list.append(timing_event)
             
-            # if no spike, add one to the timesteps_without_events :)
+            # if no spike, add one to the timesteps_without_events 
             timesteps_without_events+=1
 
     # At the end, show all the figures together
@@ -586,7 +569,7 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
 
         event_df = event_df.sort_values(by=['Neuron_Num', 'Digital_Time_Step', "Event_Type"], ascending=[True, True, False])
 
-        # Print any crazies first :)
+        # Print any crazies first 
         filtered_df = event_df[event_df.groupby(['Neuron_Num', 'Event_End_Index'])['Event_End_Index'].transform('count') > 1]
         print("---------------- Preliminary Red Flags -----------------")
         print("Any Rows that share the same run number, and event index (should never happen)")
@@ -637,14 +620,12 @@ def analyze_spike_information_mnist(image_num, layer_num, neuron_num, number_of_
             percentage = (count / total_timesteps) * 100
             print(f"Latency Number of Timesteps: ({timestep}) {count} / {total_timesteps} ({percentage:.2f}%)")
         print("\n------------------------------------------------------\n")
-
-        #print(leak_df.sort_values(by='Timestep', ascending=True))
     return event_df
 
 
 
 def process_image(image_data):
-    '''Processes an entire MNIST image in parallel for multiprocessing across batch :)'''
+    '''Processes an entire MNIST image in parallel for multiprocessing across batch '''
     try:
         iter_start = time.time()
         # First figure out what the inputs are
@@ -653,7 +634,7 @@ def process_image(image_data):
         # Creates Spike train of size (timesteps, neurons), in the default case (100, 784)
         spike_train = poisson_spike_train(image, NUMBER_OF_TIMESTEPS_PER_INFERENCE).numpy()
 
-        # Convert from digital timesteps to real timesteps :)is 
+        # Convert from digital timesteps to real timesteps is 
         layer0_num_neurons = spike_train.shape[1]
         spike_train = spike_train[:, :layer0_num_neurons]
         spikemap = np.zeros((NUMBER_OF_TIMESTEPS_PER_INFERENCE * POINTS_PER_DIGITAL_TIMESTEP, layer0_num_neurons))
@@ -684,8 +665,6 @@ def process_image(image_data):
         # Analyze output for first layer
         start_time = time.time()
 
-        # Acquire sempahore to read layer0 file :)
-        #with semaphore:        # FIXME: Not sure if causing sync problems but using batch of 2 anyways
         raw_obj_layer0 = read_simulation_file(layer0_file, simulator=SIMULATOR)
         print(f"Image: {image_id}, Simulation File Read for Layer0")
 
@@ -710,7 +689,7 @@ def process_image(image_data):
         # Concatenate Everything into one big pandas dataset
         layer0_events = pd.concat(layer0_neuron_datasets, axis=0, ignore_index=True)
 
-        # Save events :)
+        # Save events 
         layer0_events.to_csv(os.path.join(CSV_DIRECTORY,f"img{image_id}_layer{0}_events_dataset.csv"), index=False)
 
         end_time = time.time()
@@ -721,11 +700,8 @@ def process_image(image_data):
 
         # ---------------- END OF LAYER 0 ---------------------
 
-
-
-
                         
-        # Construct spike train for second layer yeah :)
+        # Construct spike train for second layer yeah 
         layer1_num_neurons = 128
         layer1_spiketrain = generate_fully_connected_spike_train(layer1_num_neurons, NUMBER_OF_TIMESTEPS_PER_INFERENCE, spike_data_df, 
                                             model_weights['fc1.weight'], WEIGHT_SCALING, INPUT_SCALING)
@@ -824,7 +800,7 @@ def process_image(image_data):
         start_time = time.time()
         raw_obj_layer2 = read_simulation_file(layer2_file, simulator=SIMULATOR)
         print(f"Image: {image_id}, Simulation File Read for Layer2")
-        # Analyze Third Layer File, Max Pool and find which is right :)
+        # Analyze Third Layer File, Max Pool and find which is right 
         time_vec = get_signal("time", raw_obj_layer2, simulator=SIMULATOR)
 
         layer2_neuron_datasets = []
@@ -857,7 +833,7 @@ def process_image(image_data):
         spike_counts_dict = spike_counts.to_dict()
         max_neuron = max(spike_counts_dict, key=spike_counts_dict.get)
 
-        # Return max neuron, label and the dictionary :)
+        # Return max neuron, label and the dictionary 
         iter_end = time.time()
         total_time_run = iter_end-iter_start
         print(f"Image: {image_id}, Total Time: {total_time_run}")
@@ -883,11 +859,10 @@ def test_multiprocessing(image_data):
         print(f"ERR on {os.getpid()}, MSG: {e}")
         #e.terminate()
 
-
+start = time.time()
 
 total_correct = 0
 total_img_processed = 0
-#multiprocessing.log_to_stderr(logging.DEBUG)
 try:
     # Multiprocess across batch
     for batch_id, (images, labels) in enumerate(testloader):
@@ -919,7 +894,7 @@ try:
         batch_end = time.time()
         print(f"Batch {batch_id}, Run Time: {batch_end-batch_start:.2f}s")
         sys.stdout.flush() 
-        # Get rid of PWL files and spice_run logs :) (Otherwise we will run out of space hehe)
+        # Get rid of PWL files and spice_run logs  (Otherwise we will run out of space hehe)
         shutil.rmtree(PWL_FILE_MAIN_DIRECTORY)
         os.makedirs(PWL_FILE_MAIN_DIRECTORY)
 
@@ -940,8 +915,19 @@ try:
 except Exception as e:
     print(f"ERR on batch {batch_id}: {e}")
 
-print(f"Finished Running {NUMBER_OF_IMAGES} inferences! Exiting :)")
+end = time.time()
+
+print(f"Finished Running {NUMBER_OF_IMAGES} inferences! Exiting ")
 print(f"Total Accuracy: ({total_correct} / {total_img_processed}) {total_correct / total_img_processed * 100:.2f}")
+print(f"Ran in {end-start}s")
+
+# Save file :)
+with open('../results/spiking_neuron_mnist_results.txt', 'w') as f:
+    f.write(f"Finished Running {NUMBER_OF_IMAGES} inferences! Exiting \n")
+    f.write(f"Total Accuracy: ({total_correct} / {total_img_processed}) {total_correct / total_img_processed * 100:.2f}\n")
+    f.write(f"Ran in {end-start}s\n")
+
 sys.stdout.flush() 
-if GLOBAL_PLOT_RUNS:
+
+if PLOT_RUNS:
     plt.show()

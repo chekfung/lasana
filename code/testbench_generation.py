@@ -11,7 +11,7 @@ import shutil
 from create_spikes import *
 from tools_helper import *
 
-# Dynamically load configs :)
+# Dynamically load configs 
 import argparse
 from dynamic_config_load import inject_config
 parser = argparse.ArgumentParser()
@@ -33,7 +33,7 @@ Author: Jason Ho, SLAM Lab, UT Austin
 sim_str = idiot_proof_sim_string(SIMULATOR)
 assert(is_simulator_real(sim_str))
 
-pwl_file_template = RUN_NAME + "_" + "pwl_file_{}_{}.txt"       # First one referes to run number, second is input net connection :)
+pwl_file_template = RUN_NAME + "_" + "pwl_file_{}_{}.txt"       # First one referes to run number, second is input net connection 
 
 # File IO to create directory structure for run
 run_directory = os.path.join('../data', RUN_NAME)
@@ -114,7 +114,7 @@ if SPIKING_INPUT:
 
 # Generate PWL files for all input runs
 
-# Create Inputs File :)
+# Create Inputs File 
 if not SPIKING_INPUT:
     inputs_filepath_tracking = os.path.join(run_directory, 'input_tracking.csv')
     inputs_fd = open(inputs_filepath_tracking, 'w')
@@ -125,7 +125,7 @@ if not SPIKING_INPUT:
 run_input_same_sign = np.random.choice([0, 1], size=NUMBER_OF_RUNS, p=[1-SAME_SIGN_WEIGHTS_FRACTION, SAME_SIGN_WEIGHTS_FRACTION])
 
 while (current_runs < NUMBER_OF_RUNS):
-    # Go through and create PWL files for each of the inputs :)
+    # Go through and create PWL files for each of the inputs 
     if SPIKING_INPUT:
         for (net_name, net) in zip(INPUT_NET_NAME, INPUT_NET):
             # Get random stuff
@@ -151,14 +151,14 @@ while (current_runs < NUMBER_OF_RUNS):
             high_weight = WEIGHT_HIGH
 
             if run_input_same_sign[current_runs]:
-                # All inputs have the same sign :)
+                # All inputs have the same sign 
                 results_all_positive = np.random.choice([True, False])
 
                 if results_all_positive:
-                    # if all results positive :)
+                    # if all results positive 
                     low_weight = 0
                 else:
-                    # Otherwise, clip high weight to 0 :)
+                    # Otherwise, clip high weight to 0 
                     high_weight = 0
 
             input_vector = generate_output_vector(spike_map, spike_footprint, low_weight, high_weight)
@@ -186,7 +186,7 @@ while (current_runs < NUMBER_OF_RUNS):
             pwl_file = os.path.join(pwl_file_main_directory, pwl_file_template.format(current_runs, net_name))
             create_pwl_file(pwl_file, time_vector, input_vector)
     else:
-        # Determine inputs first :)
+        # Determine inputs first 
         time_period_s = 1 / DIGITAL_FREQUENCY
         num_periods_in_total_sim_time = int(total_sim_time_s / time_period_s) 
 
@@ -197,7 +197,7 @@ while (current_runs < NUMBER_OF_RUNS):
         num_nets = len(INPUT_NET)
         all_inputs = np.zeros((num_nets, num_periods_in_total_sim_time))
 
-        # Check what should be the top and bottom of inputs possible :)
+        # Check what should be the top and bottom of inputs possible 
         low_voltage = VSS
         high_voltage = VDD
 
@@ -232,7 +232,7 @@ while (current_runs < NUMBER_OF_RUNS):
 
                 all_inputs[:,k] = theoretical_voltage_vector
             else:
-                # Coin flip as to whether different or not :)
+                # Coin flip as to whether different or not 
                 same_input = coin_flip(DELAY_RATIO)
 
                 if same_input:
@@ -248,7 +248,7 @@ while (current_runs < NUMBER_OF_RUNS):
                     all_inputs[:,k] = theoretical_voltage_vector
 
         for idx, (net_name, net) in enumerate(zip(INPUT_NET_NAME, INPUT_NET)):
-            # Nonspiking input for PWL, more akin to generation of pulses :)
+            # Nonspiking input for PWL, more akin to generation of pulses 
             # Digital frequency enforced
             if not DIGITAL_INPUT_ENFORCEMENT:
                 print("ERROR in generate_dataset.py: Need to enforce digital input if regular pulse input 11/3/2024")
@@ -257,12 +257,12 @@ while (current_runs < NUMBER_OF_RUNS):
             corresponding_timing_vector_with_input = np.arange(0, num_periods_in_total_sim_time)
             voltage_vector = all_inputs[idx, :]
 
-            # Write all of this into a nice inputs file for easy parsing later on :)
+            # Write all of this into a nice inputs file for easy parsing later on 
             for i in range(corresponding_timing_vector_with_input.shape[0]):
                 format = f"{current_runs},{net_name},{corresponding_timing_vector_with_input[i]},{voltage_vector[i]}\n"
                 inputs_fd.write(format)
 
-            # Generate PWL files :)
+            # Generate PWL files 
             pwl_file = os.path.join(pwl_file_main_directory, pwl_file_template.format(current_runs, net_name))
             create_pwl_from_input_pulses(pwl_file, time_period_s, transition_time, voltage_vector)
 
@@ -351,7 +351,7 @@ for i in range(NUMBER_OF_RUNS):
                     print(f"Error: Encountered something other than weight as another parameter: {name}")
                     exit(1)
 
-            # Write into outfile the new parameters that were changed :)
+            # Write into outfile the new parameters that were changed 
             change_SPICE_param_in_file(infile, outfile, nets_to_change, zero_weight_nets)
 
             # Write Vdd, VSS
@@ -476,7 +476,7 @@ with open(hyperparameter_fd, "w") as f:
         f.write(f"CUSTOM_SPIKE: {CUSTOM_SPIKE}\n")
         f.write(f"CUSTOM_SPIKE_NUM_TIME_STEP_LENGTH: {CUSTOM_SPIKE_NUM_TIME_STEP_LENGTH}\n")
 
-    # Imported files for runs :)
+    # Imported files for runs 
     f.write(f"MODEL_FILEPATH: {MODEL_FILEPATH}\n")
     f.write(f"LIBRARY_FILEPATH: {LIBRARY_FILES}\n")
     f.write(f"OTHER_NECESSARY_FILES: {OTHER_NECESSARY_FILES_IN_SPICE_RUN_DIRECTORY}\n")

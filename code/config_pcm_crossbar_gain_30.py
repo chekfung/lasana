@@ -1,6 +1,6 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Circuit Run Hyperparameters
-RUN_NAME = 'pcm_crossbar_diff_30_run'                           # Name of the run that will be created in data/
+RUN_NAME = 'pcm_crossbar_diff_30_run'                       # Name of the run that will be created in data/
 NUMBER_OF_RUNS = 1000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run

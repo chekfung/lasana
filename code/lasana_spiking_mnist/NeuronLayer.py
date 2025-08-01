@@ -115,7 +115,7 @@ class NeuronLayer:
         self.leak_events_energy_per_time_step[time_step_id].append((ids_not_spiking, energy))
 
     def handle_leak_events(self, time_step_id, spike_neuron_ids):
-        """Handle neurons undergoing leak events."""
+        """Handle neurons undergoing leak events"""
         time_since_last = self.time_since_last_update[spike_neuron_ids]
         mask = time_since_last < (time_step_id - 1)
         neurons_with_leak = spike_neuron_ids[mask]
@@ -138,7 +138,7 @@ class NeuronLayer:
             self.leak_events_energy_per_time_step[time_step_id].append((neurons_with_leak, energy))
 
     def handle_spike_events(self, time_step_id, spike_neuron_ids, spike_events):
-        """Handle spike events for the neurons."""
+        """Handle spike events for the neurons"""
         if not spike_neuron_ids.size:
             return
         

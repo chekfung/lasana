@@ -10,48 +10,63 @@ import mapWB
 import numpy as np
 import csv
 from tools_helper import *
-import matplotlib
-matplotlib.use('Agg') # set the backend before importing pyplot
-import matplotlib.pyplot as plt 
+
+"""
+This script builds upon and extends work presented in the following publication:
+
+Md Hasibul Amin, Mohammed E. Elbtity, and Ramtin Zand. 2023.
+IMAC-Sim: A Circuit-level Simulator For In-Memory Analog Computing Architectures.
+In Proceedings of the Great Lakes Symposium on VLSI 2023 (GLSVLSI '23),
+Association for Computing Machinery, New York, NY, USA, 659–664.
+https://doi.org/10.1145/3583781.3590264
+
+We acknowledge that most of the neural network structure, SPICE simulation framework,
+and core evaluation code in this file are derived from or adapted based on the
+IMAC-Sim framework presented in the above publication. All credit for the foundational
+SPICE code and in-memory analog computing simulation logic belongs to the original authors.
+
+We however, adapt the code to fit our own architectural paradigm and to get relevant statistics
+from the SPICE simulation. As such, this file as been provided to recreate the Crossbar SPICE
+simulations, if such tools are available on whatever machine is being run.
+"""
+
 
 start = time.time()
 
-testnum=10000 #Number of input test cases to run
-testnum_per_batch=10 #Number of test cases in a single batch, testnum should be divisible by this number
-firstimage=0 #start the test inputs from this image\
-csv_name = '5_12_25_8_bit_quantization.csv'#'5_11_2025_DIGITAL_NEURON.csv'
-csv_folder = 'separated_csvs_5_12_25_8_bit_quantization'#'separated_csvs_5_11_25_DIGITAL_NEURON'
+testnum=10000                                   # Number of input test cases to run
+testnum_per_batch=10                            # Number of test cases in a single batch, testnum should be divisible by this number
+firstimage=0                                    # start the test inputs from this image
+csv_name = '../data/test.csv'#'../data/crossbar_mnist_lasana_acc_data.csv'      # FIXME: Change this back
+csv_folder = '../data/test_crossbar_mnist_golden_results'#../data/crossbar_mnist_golden_results' # FIXME: Change this back
+RESULTS_PATH = '../results'
 
 # Quantization Constants
 USE_QUANTIZATION = True
 DAC_BITS = 8
 
 #list of inputs start
-data_dir='data' #The directory where data files are located
-spice_dir='test_spice' #The directory where spice files are located
-dataset_file='test_data.csv' #Name of the dataset file
-label_file='test_labels.csv' #Name of the label file
-weight_var=0.0 #percentage variation in the resistance of the synapses
-vdd=0.8 #The positive supply voltage
-vss=-0.8 #The negative supply voltage
-tsampling=4 #The sampling time in nanosecond    # FIXME: Change this to 5ns later on :)
-nodes=[400,120,84,10] #Network Topology, an array which defines the DNN model size
-xbar=[32,32] #The crossbar size
-gain=[30,30,10] #Array for the differential amplifier gains of all hidden layers
-tech_node=9e-9 #The technology node e.g. 9nm, 45nm etc.
-metal=3*tech_node #Width of the metal line for parasitic calculation
-T=22e-9 #Metal thickness
-H=20e-9 #Inter metal layer spacing
-L=15*tech_node #length of the bitcell
-W=12*tech_node #width of the bitcell
-D=5*tech_node #distance between I+ and I- lines
-eps = 20*8.854e-12 #permittivity of oxide
-rho = 1.9e-8 #resistivity of metal
-#rlow=5e3 #Low resistance level of the memristive device
-#rhigh=15e3 #High resistance level of the memristive device
-rlow=78000
-rhigh=202000
-#list of inputs end
+data_dir='../data/imac_mnist_model'                         # The directory where data files are located
+dataset_file='test_data.csv'                                # Name of the dataset file in data_dir
+label_file='test_labels.csv'                                # Name of the label file in data_dir
+spice_dir='../data/pcm_crossbar_mac_mnist_spice_files'      # Where SPICE files are located and will be written to (just diff, param files, libraries, and some other stuff)
+weight_var=0.0                                              # percentage variation in the resistance of the synapses
+vdd=0.8                                                     # The positive supply voltage
+vss=-0.8                                                    # The negative supply voltage
+tsampling=4                                                 # The sampling time in nanosecond  
+nodes=[400,120,84,10]                                       # Network Topology, an array which defines the DNN model size
+xbar=[32,32]                                                # The crossbar size
+gain=[30,30,10]                                             # Array for the differential amplifier gains of all hidden layers
+tech_node=9e-9                                              # The technology node e.g. 9nm, 45nm etc.
+metal=3*tech_node                                           # Width of the metal line for parasitic calculation
+T=22e-9                                                     # Metal thickness
+H=20e-9                                                     # Inter metal layer spacing
+L=15*tech_node                                              # length of the bitcell
+W=12*tech_node                                              # width of the bitcell
+D=5*tech_node                                               # distance between I+ and I- lines
+eps = 20*8.854e-12                                          # permittivity of oxide
+rho = 1.9e-8                                                # resistivity of metal
+rlow=78000                                                  # memristive low state resistance
+rhigh=202000                                                # memristive high state resistance
 
 hpar=[math.ceil((x+1)/xbar[0]) for x in nodes] #Calculating the horizontal partitioning array for all hidden layers
 hpar.pop() #The last value in the array is removed for hpar
@@ -105,23 +120,6 @@ def create_pwl_from_input_pulses(filename, time_of_each_input, transition_time, 
             current_time += (time_of_each_input - transition_time)
             f.write(f"{current_time}, {target_voltage}\n")
 
-#function to update the device resistances in the neuron.sp file, which includes the spice file for activation function
-def update_neuron (rlow,rhigh):
-    ff=open(spice_dir+'/'+'neuron.sp', "r+")
-    i=0
-    data= ff.readlines()
-    for line in data:
-        i+=1
-        if 'Rlow' in line:
-            data[i-1]='Rlow in2 input ' + str(rlow) +'\n'
-        if 'Rhigh' in line:
-            data[i-1]='Rhigh input out ' + str(rhigh) +'\n'
-
-    ff.seek(0)
-    ff.truncate()
-    ff.writelines(data)
-    ff.close()
-
 #function to update the gain for the differential amplifiers
 def update_diff (gain, LayerNUM):
     name=spice_dir+'/'+'diff{}.sp'.format(LayerNUM)
@@ -140,25 +138,6 @@ def update_diff (gain, LayerNUM):
     ff.truncate()
     ff.writelines(data)
     ff.close()
-
-
-def min_max_normalization(vector):
-    """
-    Performs min-max normalization on the input vector, scaling its values to the range [0, 1].
-
-    Parameters:
-    - vector: NumPy array or list containing the values to be normalized.
-
-    Returns:
-    - normalized: The normalized vector.
-    - global_min: The minimum value of the original vector.
-    - global_max: The maximum value of the original vector.
-    """
-    global_min = np.min(vector)
-    global_max = np.max(vector)
-    normalized = (vector - global_min) / (global_max - global_min)
-
-    return normalized, global_min, global_max
 
 #function to extract the measured voltage at a specific time in the output text file genrated by SPICE
 def findat (line):
@@ -214,7 +193,7 @@ for i in range(len(dataset_bin)):
     data_w.write("%f\n"%(float(dataset_bin[i])))	
 data_w.close()
 
-#label preprocessing
+# label preprocessing
 label = np.genfromtxt(data_dir+'/'+'test_labels.csv',delimiter=',')
 label_flat = label.flatten()
 label_w = open(data_dir+'/'+'testlabel.txt', "w")
@@ -227,7 +206,6 @@ label_r=open(data_dir+'/'+'testlabel.txt', "r")  # testlabel.txt includes the la
 data_all=data_r.readlines() #data_all contains all test images
 label_all=label_r.readlines() #label_all contains all labels
 length=len(nodes) #length contains the number of layers in DNN model
-update_neuron(rlow,rhigh) #updates the resistances in the neuron
 for i in range(len(nodes)-1):
     update_diff(gain[i],i+1) #updates the differential amplifier gains
 mapWB.mapWB(length,rlow,rhigh,nodes,data_dir,weight_var) #calling mapWB which sets the corresponding resistance value for weights and biases
@@ -237,7 +215,7 @@ testimage=firstimage
 err=[] #the array containing error information for each test case
 pwr_list=[] #the array containing power information for each test case
 
-# Create CSV to store eveything :)
+# Create CSV to store eveything 
 headers = ['image_num', 'golden_label', 'predicted_label', 'energy'] + \
           [f'output{j}' for j in range(10)]
 
@@ -280,7 +258,7 @@ for i in range(batch):
     layers_to_run, _, layers_keys, layer_cuts = mapIMACPartition_Separate_Files.mapIMAC(nodes,xbar[0],hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testnum_per_batch,data_dir,spice_dir,vdd,vss,tsampling)
     print("Running Classifier")
 
-    # Run Files, in order :)
+    # Run Files, in order 
     # Open file descriptors for everything in a batch
     batch_energies = np.zeros(testnum_per_batch)
     fd = []
@@ -289,7 +267,7 @@ for i in range(batch):
     for j in range(testnum_per_batch):
         real_image_id = (image_num + j) + firstimage
 
-        # Create CSV :)
+        # Create CSV 
         filename = os.path.join(csv_folder, f"image_{real_image_id}_inference.csv")
         per_inference_fd = open(filename, mode='w', newline='')
         image_writer = csv.writer(per_inference_fd)
@@ -299,7 +277,7 @@ for i in range(batch):
         csv_writers.append(image_writer)
 
     # Run through and run each of the nodes
-    # Then analyze and then create PWL files to run the next file :)
+    # Then analyze and then create PWL files to run the next file 
     for layer_num in range(len(nodes)-1):
         # Crossbar to run
         print(f'Batch: {i} Run Layer: {layer_num+1}')
@@ -340,7 +318,7 @@ for i in range(batch):
             # Fix the end index to be plus one (so that we slightly overlap things.)
             start_index = valid_timestep_indices[0][0]  
             end_index_i = valid_timestep_indices[0][-1]+1
-            end_index = np.min([end_index_i, len(time_vec)-1])      # Join the end of the index with the start of the new guy :)
+            end_index = np.min([end_index_i, len(time_vec)-1])      # Join the end of the index with the start of the new guy 
 
             layer_crossbar_items = layers_keys[layer_num+1]
             hor_cut, vert_cut = layer_cuts[layer_num+1]
@@ -421,10 +399,10 @@ for i in range(batch):
                 row = [f"layer_{layer_num+1}_{x_id}_{y_id}_{split_r}", event_latency, event_energy, current_output, previous_output]
                 csv_writers[j].writerow(row)
 
-        # Create PWL Files :)
+        # Create PWL Files 
         layer_crossbar_items = layers_keys[layer_num+1]
 
-        # Note first zero is not used and is always just zero :)
+        # Note first zero is not used and is always just zero 
         input_digital_neuron_signals = np.zeros((nodes[layer_num+1], testnum_per_batch+1))
 
         # Go through each cross bar
@@ -447,7 +425,7 @@ for i in range(batch):
                 # Fix the end index to be plus one (so that we slightly overlap things.)
                 start_index = valid_timestep_indices[0][0]  
                 end_index_i = valid_timestep_indices[0][-1]+1
-                end_index = np.min([end_index_i, len(time_vec)-1])      # Join the end of the index with the start of the new guy :)
+                end_index = np.min([end_index_i, len(time_vec)-1])      # Join the end of the index with the start of the new guy 
 
                 # Get Truncated Output
                 truncated_output_signal = output_signal[start_index:end_index]
@@ -576,14 +554,12 @@ print("Total area = "+str(area)+" \u00b5m^2")
 
 print("Task completed!")
 print("Total error= %d"%(sum(err)))
-err_w=open("error.txt", "w")
-err_w.write("Number of wrong recognitions in %d input image(s) = %d\n"% (image_num, sum(err)))
-err_w.close()
 data_r.close()
 label_r.close()
 
-print("error rate = %f"%(sum(err)/float(testnum)))   #calculate error rate
-print("accuracy = %f%%"%(100-(sum(err)/float(testnum))*100))   #calculate accuracy
+error_rate = sum(err) / float(testnum)
+print(f"Error Rate = {error_rate:.4f}")                         # Calculate error rate
+print(f"Accuracy = {100 - error_rate * 100:.2f}%")              # Calculate accuracy
 
 #measure the run time
 end = time.time()
@@ -595,3 +571,12 @@ tsec=second-(hour*3600)-(tmin*60)
 
 print("Program Execution Time = %d hours %d minutes %d seconds"%(hour,tmin,tsec))
 
+# Create file that will write into the results 
+with open(os.path.join(RESULTS_PATH, "crossbar_mnist_results.txt"), 'w') as f:
+    f.write(f"Total Number of Inferences: {testnum}\n")
+    f.write(f"Total Error: {sum(err)}\n")
+    f.write(f"Error Rate = {error_rate:.4f}\n")                      
+    f.write(f"Accuracy = {100 - error_rate * 100:.2f}%\n")              
+    f.write("Total Area = "+str(area)+" \u00b5m^2\n")
+    f.write("Program Execution Time = %d hours %d minutes %d seconds\n"%(hour,tmin,tsec)) 
+    f.write(f"Program Execution Time in seconds: {second}")

@@ -27,7 +27,6 @@ python_files_pcm_crossbar = [
     "pcm_crossbar_predict_static_energy_ml_model.py"
 ]  
 
-
 def run_python_files(files, option=None, arg=None):
     for file in files:
         try:
@@ -69,17 +68,10 @@ if __name__ == "__main__":
     print(f"Running the following files for Spiking Neuron: [{python_files}]")
     run_python_files(python_files, '--config', CONFIG_SPIKING_NEURON)
 
-    # TODO: I think that I will just move relevant files into the results folder.
-
     # Run LASANA for PCM crossbar with gain of 10
     CONFIG_DIFF_10 = 'config_pcm_crossbar_gain_10'
     print(f"Running the following files for PCM Crossbar Gain 10: [{python_files_pcm_crossbar}]")
     run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_10)
-
-    # TODO: I think that I will just move relevant files into the results folder.
-
-    # TODO: Create script that combines the two tables together and makes them pretty so it looks like the table that we had.
-
 
     # Run LASANA for PCM crossbar with gain of 30
     CONFIG_DIFF_30 = 'config_pcm_crossbar_gain_30'
@@ -87,6 +79,7 @@ if __name__ == "__main__":
     run_python_files(python_files_pcm_crossbar, '--config', CONFIG_DIFF_30)
 
     # TODO: I think that I will just move relevant files into the results folder.
+    # TODO: Create script that combines the two tables together and makes them pretty so it looks like the table that we had.
     
     # ------------------------------------ #
 
@@ -116,22 +109,32 @@ if __name__ == "__main__":
     ## Recreates partial results that are found in Section V.E (MNIST and Spiking MNIST Case Study) in the paper.
     ## Since it is not possible to run the respective SPICE models for the two experiments, the code has been provided in the following scripts: 
     ## TODO: List code to the SPICE circuits
-    ## Instead, due to space limitations, the first 500 inferences of each of the two test datasets have been provided in /data/#FIXME: for
-    ## the spiking neuron and /data/#FIXME: for the crossbar array.
+    ## Instead, due to space limitations, the first 500 inferences of each of the two test datasets have been provided in /data/crossbar_mnist_golden_results for
+    ## the spiking neuron and /data/spiking_mnist_golden_results for the crossbar array.
 
     # Run LASANA Spiking MNIST
+    os.chdir("lasana_spiking_mnist")
     print(f"Running first 500 test images of LASANA Spiking MNIST")
-    # FIXME: Note that before we run these, we need to CD into their respective directory
-    run_python_files(['lasana_spiking_mnist/run_mnist_lasana.py'])      # FIXME: Make it run first 500 images
+    run_python_files(['run_mnist_lasana.py'])     
 
     # Run LASANA Crossbar MNIST
+    os.chdir('..')
+    os.chdir("lasana_crossbar_mnist")
     print(f"Running first 500 test images of LASANA Crossbar MNIST")
-    #run_python_files(['lasana_crossbar_mnist/imac_mnist.py'])           # FIXME: Make it run first 500 images
+    run_python_files(['imac_mnist.py'])      
     
     # Run Comparison Scripts
-    # TODO: Need to do this
-    # TODO: Also need it to spit out some nice results and then put into the results folder.
+    os.chdir('..')
 
+    # Run Spiking MNIST comparison scripts on first 500 inferences
+    print("Running Spiking MNIST Comparison Script")    
+    run_python_files(['spice_versus_lasana_spiking_comparison.py'])
+
+    # Run Crossbar MNIST comparison scripts on first 500 inferences
+    print("Running Crossbar MNIST Comparison Script")
+    run_python_files(['spice_versus_lasana_imac_comparison.py'])
+
+    # ------------------------------------ #
         
     print("All Runs Finished for LASANA!")
     print("Exiting gracefully :)")

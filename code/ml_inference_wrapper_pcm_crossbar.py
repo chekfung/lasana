@@ -1,7 +1,4 @@
 import numpy as np
-import matplotlib
-matplotlib.use('Agg') # set the backend before importing pyplot
-import matplotlib.pyplot as plt
 import pandas as pd
 import os 
 from catboost import CatBoostRegressor, CatBoostClassifier
@@ -60,7 +57,6 @@ SHOW_FIGS = False
 SAVE_FIGS = False
 SCALE_MULTIPLIER_OF_CIRCUITS = [0.01, 0.1, 1, 3, 5, 20]
 
-# -------------------------------------
 LIST_OF_COLUMNS_X = ["Run_Number", "Input_Total_Time"]
 LIST_OF_INPUTS = []
 
@@ -157,7 +153,7 @@ for multiplier in SCALE_MULTIPLIER_OF_CIRCUITS:
         circuit_params[i,:] = np.array(params_i[CIRCUIT_PARAMS])
         
     # ----
-    # Get rid of data_df_big for memory reasons :)
+    # Get rid of data_df_big for memory reasons
     del data_df_big
 
     # Declare Global Neuron States 

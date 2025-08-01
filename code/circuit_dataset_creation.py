@@ -30,7 +30,6 @@ LASANA Dataset Creation (File 2 of creation of the dataset)
 Author: Jason Ho, SLAM Lab, UT Austin
 '''
 
-
 figure_counter = 0
 
 # Reads in a SPICE file to precache and pickle the PSF object if necessary from the CAD tools
@@ -100,8 +99,8 @@ if not SPIKING_INPUT:
     inputs_fp = os.path.join(run_directory, 'input_tracking.csv')
 
     inputs_df = pd.read_csv(inputs_fp)
+
     # Pivot the DataFrame
-    
     collapsed_df = inputs_df.pivot_table(
         index=["Run_Number", "Digital_Timestep"],
         columns="Input_Net_Name",
@@ -117,12 +116,10 @@ if not SPIKING_INPUT:
 
     # Reorder the DataFrame columns
     input_per_timestep = collapsed_df[non_numeric_cols + numeric_cols]
-    #input_per_timestep = input_per_timestep.set_index(["Run_Number", "Digital_Timestep"])
     
     # Save it :)
     input_pivot_fp = os.path.join(run_directory, "input_pivoted.csv")
     input_per_timestep.to_csv(input_pivot_fp, index=False)
-
 
 total_simulation_time = hyperparameters_dict["TOTAL_TIME_NS"] * 10**-9
 number_of_timesteps = int(total_simulation_time * digital_freq)
@@ -135,7 +132,6 @@ events_list = []
 if SIMULATOR == 'hspice' or SIMULATOR == 'spectre':
     with Pool() as pool:
         pool.map(analyze_run, range(NUMBER_OF_RAW_RUNS))
-
 
 # -----------
 # Start of Dataset Creation Script
@@ -394,10 +390,7 @@ for i in range(NUMBER_OF_RAW_RUNS):
             plt.plot(time_vec*10**9,normalize(output_spikes), color='red', label='out')
             plt.plot(time_vec*10**9,input_mask,color='purple', label='in_mask')
             plt.plot(time_vec*10**9, combine_all_masks, color='purple', ls='--',label='out_spike')
-            #plt.plot(time_vec*10**9, output_mask, color='black', linewidth=2, label='out mask')
             plt.plot(time_vec*10**9, circuit_state, label='circuit_state', color='black', ls='--')
-            #plt.plot(time_vec*10**9,normalize(output_gradients), color='orange')
-            #plt.plot(time_vec*10**9, meow, color='black')
 
             knob_vals = {}
             for knob in KNOB_NAMES:
@@ -524,17 +517,13 @@ for i in range(NUMBER_OF_RAW_RUNS):
 
                 if output_spike_found:
                     if output_start_index < start_index:
-                        # Not real spike :()
+                        # Not real spike 
                         event_type = 'in-no_out'
                         latency = 0
                         
                         print(f"WARNING: NOT A REAL SPIKE :o AT RUN: {i}, TIMESTEP: {j}")
 
                     elif output_start_index == start_index:
-                        # Real spike, but I will just move it over a little bit so it is not something crazy :)
-                        #event_type = 'in-out'
-                        #output_spike_peak+=4
-                        #latency = time_vec[output_spike_peak] - time_vec[spike_peak_index]
                         event_type='in-no_out'
                         latency=0
 

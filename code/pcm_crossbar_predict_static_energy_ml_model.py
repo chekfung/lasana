@@ -152,7 +152,6 @@ table.add_row(["MLP", f"{train_time:.6f}", f"{test_time:.6f}"]+baseline_metrics)
 
 # -------------------------------
 # Plot correlation plots for CatBoost and MLP
-
 plt.figure(figure_counter)
 plt.gca().set_aspect('equal', adjustable='box')
 figure_counter+=1    

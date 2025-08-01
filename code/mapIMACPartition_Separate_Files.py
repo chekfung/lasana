@@ -3,6 +3,25 @@ import os
 from mapPartitionIMAC import *
 from tools_helper import *
 
+"""
+This script builds upon and extends work presented in the following publication:
+
+Md Hasibul Amin, Mohammed E. Elbtity, and Ramtin Zand. 2023.
+IMAC-Sim: A Circuit-level Simulator For In-Memory Analog Computing Architectures.
+In Proceedings of the Great Lakes Symposium on VLSI 2023 (GLSVLSI '23),
+Association for Computing Machinery, New York, NY, USA, 659–664.
+https://doi.org/10.1145/3583781.3590264
+
+We acknowledge that most of the neural network structure, SPICE simulation framework,
+and core evaluation code in this file are derived from or adapted based on the
+IMAC-Sim framework presented in the above publication. All credit for the foundational
+SPICE code and in-memory analog computing simulation logic belongs to the original authors.
+
+We however, adapt the code to fit our own architectural paradigm and to get relevant statistics
+from the SPICE simulation. As such, this file as been provided to recreate the Crossbar SPICE
+simulations, if such tools are available on whatever machine is being run.
+"""
+
 def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testnum,data_dir,spice_dir,vdd,vss,tsampling):
     # For each layer / activation layer, create separate file
     layers = {}
@@ -40,7 +59,7 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
         ## Create Crossbar Invocations
         layer_output_neurons = nodes[i+1]
 
-        # Note: If same layer, same y_id, and same row, go to the same output number :)
+        # Note: If same layer, same y_id, and same row, go to the same output number 
         input_name = "layer_{}_in{} "
 
         if i!=0:
@@ -50,7 +69,7 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
         f.write(f"\n\n********** Layer {i+1} **********\n")
 
         for (x_id, y_id, split_r) in layer_keys:
-            # Use separate vdd, vss :)
+            # Use separate vdd, vss 
             vdd_name = f"vdd_{i+1}_{x_id}_{y_id}_{split_r}"
             vss_name = f"vss_{i+1}_{x_id}_{y_id}_{split_r}"
             f.write(f"{vss_name} {vss_name} 0 DC VssVal\n")
@@ -63,7 +82,7 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
             things_to_probe.append(f"i({vdd_name})")
             things_to_probe.append(f"i({vss_name})")
 
-            # Calculate input ranges :)
+            # Calculate input ranges 
             low_range_x = hor_cut[x_id-1]
             high_range_x = hor_cut[x_id]
 
@@ -99,7 +118,7 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
             
             f.write(f"layer_{i+1}_{x_id}_{y_id}_{split_r}\n")
 
-        # Connect to Output Capacitor :)
+        # Connect to Output Capacitor 
         f.write(f"\n\n********** Output Capacitors in Layer {i+1} **********\n")
         for (x_id, y_id, split_r) in layer_keys:
             f.write(f"C_{x_id}_{y_id}_{split_r} layer_{i+1}_{x_id}_{y_id}_{split_r}_out 0 500f\n")
@@ -123,8 +142,8 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
                 f.write(")\n")
             c.close()
         else:
-            # Get neuron layer outputs from previous layer :)
-            # Write input based on previous stuff :)
+            # Get neuron layer outputs from previous layer 
+            # Write input based on previous stuff 
             f.write("\n\n**********Input Test****************\n\n")
             
             for n in range(nodes[i]):
@@ -142,7 +161,7 @@ def mapIMAC(nodes,xbar_length,hpar,vpar,metal,T,H,L,W,D,eps,rho,weight_var,testn
         for guy in things_to_probe:
             f.write(f".probe {guy}\n")
 
-        # Write .end :)
+        # Write .end 
         f.write(".end")
 
         f.close() 

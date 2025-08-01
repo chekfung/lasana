@@ -1,18 +1,12 @@
 import numpy as np
-import matplotlib
-matplotlib.use('Agg') # set the backend before importing pyplot
-import matplotlib.pyplot as plt
 import pandas as pd
 import os 
 from catboost import CatBoostRegressor, CatBoostClassifier
 import time
 from collections import defaultdict
 from joblib import load
-from sklearn.metrics import mean_squared_error, mean_absolute_error,r2_score, mean_absolute_percentage_error
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, confusion_matrix
 from prettytable import PrettyTable
 from predict_ml_model_helpers import write_prettytable
-from scipy.stats import zscore
 from datetime import date    
 today = date.today().isoformat()
 import joblib
@@ -32,7 +26,6 @@ NUM_NEURON_PARAMS = len(NEURON_PARAMS)
 period = 5 * 10**-9
 LOAD_IN_MLP_MODELS = True
 num_neurons = [10, 100, 1000, 3000, 5000, 20000]
-
 
 # --------------------------------------
 

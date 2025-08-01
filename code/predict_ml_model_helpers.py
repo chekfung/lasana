@@ -9,7 +9,7 @@ import joblib
 from scipy.interpolate import NearestNDInterpolator
 from catboost import CatBoostRegressor
 from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.preprocessing import  StandardScaler
 from sklearn.neural_network import MLPRegressor
 
 # Classifiers
@@ -23,21 +23,18 @@ from sklearn.linear_model import LogisticRegression
 # Metrics and Statistics
 from sklearn.metrics import mean_squared_error, r2_score,mean_absolute_percentage_error, mean_absolute_error    # regressor
 from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score    # classifier
-from scipy.stats import zscore
 from sklearn.model_selection import train_test_split
 
 # Visualization
 import matplotlib
 matplotlib.use('Agg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
-from matplotlib import cm
 
 # Pytorch additions :)
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
-from torch.optim.lr_scheduler import ExponentialLR
 
 
 RANDOM_STATE = 42
