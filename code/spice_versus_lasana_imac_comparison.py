@@ -161,8 +161,9 @@ for k in range(NUM_IMAGES):
 print(f"Num Images: {NUM_IMAGES}")
 print(f"Average Energy Error: {df_merged_energy['percent_error_energy'].mean()}")
 print(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)}")
+print(f"Average MAPE Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}")
 print(f"Average MAPE Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}")
-print(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}")
+
 
 # Save all results to CSV so we do not have to recalculate :)
 output_csv_name = os.path.join(results_folder, "per_inference_statistics.csv")
@@ -176,5 +177,6 @@ with open(summary_file, "a") as f:
     f.write(f"Num Images: {NUM_IMAGES}\n")
     f.write(f"Average Energy Error: {df_merged_energy['percent_error_energy'].mean()}\n")
     f.write(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)}\n")
-    f.write(f"Average MAPE Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}\n")
     f.write(f"Average MAPE Energy Error / Image Inference: {sum(all_energy_mapes) / len(all_energy_mapes)}\n")
+    f.write(f"Average MAPE Latency Error / Image Inference: {sum(all_latency_mapes) / len(all_latency_mapes)}\n")
+    

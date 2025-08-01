@@ -111,7 +111,7 @@ VSS_CURRENT = None
 
 # ----------------------------- BEGIN Model Training Hyperparameters ------------------------------ #
 DETERMINISTIC = True                    # Sets the random seeds for weight initialization to RANDOM_SEED below.  
-RANDOM_SEED = 42                        # Only if DETERMINISTIC is True. Makes the training the same every time for MLP and CatBoost
+RANDOM_SEED = 55                        # Only if DETERMINISTIC is True. Makes the training the same every time for MLP and CatBoost
 PLOT_MATPLOTLIB_FIGS = False            # Show matplotlib figures
 SAVE_FIGS = True                        # Save correlation plots
 SAVE_CATBOOST_MODEL = True              # Self Explanatory. Saves all of the catboost models

@@ -202,8 +202,9 @@ for k in range(NUM_IMAGES):
 print(f"Num Images: {NUM_IMAGES}")
 print(f"Average Energy Error: {sum(energy_errs) / len(energy_errs)}")
 print(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)} ")
-print(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}")
 print(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(dynamic_energy_mape) / len(dynamic_energy_mape)}")
+print(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}")
+
 
 # Create Pandas DF to save everything to
 data = list(zip(img_ids, energy_errs, latency_errs, dynamic_energy_mape, latency_mape))
@@ -219,6 +220,7 @@ with open(summary_file, "a") as f:
     f.write(f"Num Images: {NUM_IMAGES}\n")
     f.write(f"Average Energy Error: {sum(energy_errs) / len(energy_errs)}\n")
     f.write(f"Average Latency Error: {sum(latency_errs) / len(latency_errs)}\n")
-    f.write(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}\n")
     f.write(f"Average MAPE Dynamic Energy Error / Image Inference: {sum(dynamic_energy_mape) / len(dynamic_energy_mape)}\n")
+    f.write(f"Average MAPE Latency Error / Image Inference: {sum(latency_mape) / len(latency_mape)}\n")
+
 
