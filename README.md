@@ -15,7 +15,7 @@ Neuromorphic systems using in-memory or event-driven computing are motivated by 
 This repository contains the code and scripts used for our paper: LASANA: Large-Scale Surrogate Modeling for Analog Neuromorphic Architecture Exploration, accepted at MLCAD 2025. The code is structured for a Code Ocean capsule (link above), an immutable, reproducible container that contains code, datasets, and outputs from a run on their systems. We detail some of the limitations / guardrails put in place to successfully emulate our environment and results using Code Ocean below.
 
 #### Limitations of Code Ocean
-- For reproducability sake, much of the randomness associated with this code (random-generated inputs, ML model initial weights, etc.) have been set to a specific seed. In a future section, we will dictate exactly how to disable these guardrails to enable randomness. 
+- For reproducability sake, much of the randomness associated with this code (random-generated inputs, ML model initial weights, etc.) have been set to a specific seed. That said, the exact seeds used to exactly recreate the results in the paper exactly are unknown, and thus, the results do not exactly match the numbers found in the paper. We find that the results fall within the expected margin of variation. In a future section, we will dictate exactly how to disable these guardrails to enable randomness. 
 
 - Due to the limitations of Code Ocean capsules, any section that deals with proprietary CAD tools (testbench generation, dataset creation, SPICE runs, SystemVerilog Real Number Modeling Runs) have been commented out of the main script, but available to enable if one has access to these tools. 
 
