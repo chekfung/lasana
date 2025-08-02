@@ -1,6 +1,6 @@
 # LASANA: Large-Scale Surrogate Modeling for Analog Neuromorphic Architecture Exploration
 **Authors:** Jason Ho, James. A. Boyle, Linshen Liu, and Andreas Gerstlauer \
-**Affiliation:** The University of Texas at Austin, System-Level and Modeling Lab (SLAM Lab) \
+**Affiliation:** The University of Texas at Austin, System-Level Architecture and Modeling Group (SLAM Lab) \
 **Conference:** Machine Learning on Computer-Aided Design (MLCAD) 2025 \
 **Corresponding Contact**: jason_ho@utexas.edu
 
