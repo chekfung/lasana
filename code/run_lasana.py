@@ -10,8 +10,8 @@ Author: Jason Ho
 
 # List of Python file names you want to execute
 python_files = [
-    #"testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
-    #"circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    "testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    "circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
     "predict_dynamic_energy_ml_model.py",
     "predict_latency_ml_model.py",
     "predict_state_ml_model.py",
@@ -20,8 +20,8 @@ python_files = [
 ]  
 
 python_files_pcm_crossbar = [
-    #"testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
-    #"circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    "testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    "circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
     "pcm_crossbar_predict_dynamic_energy_ml_model.py",
     "pcm_crossbar_predict_latency_ml_model.py",
     "pcm_crossbar_predict_behavior_ml_model.py",
