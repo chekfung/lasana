@@ -4,9 +4,19 @@ import subprocess
 import sys
 import re
 from datetime import datetime, timezone
+import shutil
+import importlib
 
+RUN_NAME = "naive_run"
+
+DRY_RUN = False
 CONFIG_DIR = "io_space_analysis/configs"
 DATA_DIR = "../data"
+
+EXPORT_DATA = True
+EXPORT_DIR = Path("../results") / RUN_NAME
+
+ZIP_RESULTS = True
 
 python_files = [
     "testbench_generation.py",             
@@ -64,6 +74,9 @@ if __name__ == "__main__":
         config_name = "io_space_analysis.configs." + str(Path(config).stem)
         config_start_time = datetime.now(timezone.utc)
 
+        config_module = importlib.import_module(f"configs.{Path(config).stem}")
+        run_name = getattr(config_module, "RUN_NAME")
+
         with open(run_info_file, "a") as f:
             f.write(f'''Processing configuration: "{config_name}" found in file: "{config}"\n''')
             f.write(f'''Began processing at {config_start_time.strftime("%H:%M:%S")}\n''')
@@ -72,11 +85,25 @@ if __name__ == "__main__":
         print(f"Running the following files: [{python_files}]")
         print(f'''With current configuration: "{config_name}" defined in file "{config}"''')
 
-        run_python_files(python_files, '--config', config_name)
+        if not DRY_RUN:
+            run_python_files(python_files, '--config', config_name)
 
         config_end_time = datetime.now(timezone.utc)
         with open(run_info_file, "a") as f:
             f.write(f'''Finished processing at {config_end_time.strftime("%H:%M:%S")}\n''')
             f.write(f'''Total elapsed time: {(config_end_time - config_start_time).total_seconds()} seconds\n\n''')
 
+        if EXPORT_DATA:
+            old_dir = Path(DATA_DIR) / run_name
+            new_dir = EXPORT_DIR
 
+            if not DRY_RUN:
+                shutil.move(str(old_dir.absolute()), str(new_dir.absolute()))
+            else:
+                print(f"Moving {old_dir.absolute()} to {new_dir.absolute()}")
+
+if ZIP_RESULTS and EXPORT_DATA:
+    if not DRY_RUN:
+        shutil.make_archive(str(EXPORT_DIR.absolute()), 'zip', str(EXPORT_DIR.absolute()))
+    else:
+        print(f"Zipping {EXPORT_DIR.absolute()} to {EXPORT_DIR.absolute()}.zip")
