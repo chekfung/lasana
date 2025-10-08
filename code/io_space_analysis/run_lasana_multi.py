@@ -47,7 +47,6 @@ def run_python_files(files, option=None, arg=None):
             print(f"Error occurred while running {file}: {e}")
 
 if __name__ == "__main__":
-    cmds = []
     run_start_time = datetime.now(timezone.utc)
     run_info_name = "run_info_" + run_start_time.strftime("%Y_%d_%m-%H_%M_%S") + ".txt"
     run_info_file = Path(DATA_DIR) / run_info_name
@@ -58,7 +57,7 @@ if __name__ == "__main__":
 
     config_dir = Path(CONFIG_DIR)
     for config in os.listdir(config_dir):
-        config_name = Path(config).stem
+        config_name = "io_space_analysis.configs" + str(Path(config).stem)
         config_start_time = datetime.now(timezone.utc)
 
         with open(run_info_file, "a") as f:
