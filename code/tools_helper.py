@@ -367,7 +367,7 @@ def run_cadence_spectre(args):
 
     # Run the SPICE simulation
     log_file = os.path.join(dirname, splited+'_sim_log.txt')
-    cmd = f"spectre +aps {spice_filepath} -format psfascii -r {total_raw_path} +multithread =l {log_file}"
+    cmd = f"spectre +aps -64 {spice_filepath} -format psfascii -r {total_raw_path} +multithread =l {log_file}"
     exit_code = os.system(cmd)
     if exit_code != 0:
         error_message = f"Error running simulation #{sim_index} for {spice_filepath}, exit code: {exit_code}"
