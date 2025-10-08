@@ -77,6 +77,6 @@ if __name__ == "__main__":
         config_end_time = datetime.now(timezone.utc)
         with open(run_info_file, "a") as f:
             f.write(f'''Finished processing at {config_end_time.strftime("%H:%M:%S")}\n''')
-            f.write(f'''Total elapsed time: {config_start_time.second - config_end_time.second} seconds\n\n''')
+            f.write(f'''Total elapsed time: {(config_end_time - config_start_time).total_seconds()} seconds\n\n''')
 
 
