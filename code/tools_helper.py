@@ -467,7 +467,7 @@ def run_simulation(spice_files_list, num_processes=1, simulator='spectre'):
     """
 
     # First Thing
-    ARTIFICIAL_PROCESS_LIMIT = 20
+    ARTIFICIAL_PROCESS_LIMIT = 40
     
     sim_str = idiot_proof_sim_string(simulator)
     assert(is_simulator_real(sim_str))

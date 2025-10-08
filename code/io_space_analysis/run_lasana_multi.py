@@ -2,8 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import time
-
+import re
 from datetime import datetime, timezone
 
 CONFIG_DIR = "io_space_analysis/configs"
@@ -18,6 +17,8 @@ python_files = [
     "predict_spike_behavior_ml_model.py",
     "predict_static_energy_ml_model.py"
 ]  
+
+config_pattern = re.compile(r'''config_.*''')
 
 def run_python_files(files, option=None, arg=None):
     for file in files:
@@ -57,7 +58,10 @@ if __name__ == "__main__":
 
     config_dir = Path(CONFIG_DIR)
     for config in os.listdir(config_dir):
-        config_name = "io_space_analysis.configs" + str(Path(config).stem)
+        if not config_pattern.match(config):
+            continue
+
+        config_name = "io_space_analysis.configs." + str(Path(config).stem)
         config_start_time = datetime.now(timezone.utc)
 
         with open(run_info_file, "a") as f:
