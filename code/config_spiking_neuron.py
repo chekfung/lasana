@@ -1,7 +1,7 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Spiking Circuit Run Hyperparameters
 RUN_NAME = 'spiking_neuron_run'                             # Name of the run that will be created in data/
-NUMBER_OF_RUNS = 2000                                       # Number of testbenches / randomized SPICE runs
+NUMBER_OF_RUNS = 20000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
 SIM_MIN_STEP_SIZE_NS = 0.01                                 # Minimum step size in nanoseconds of the simulation 
@@ -36,7 +36,7 @@ SUBCIRCUIT_DEFINITION = f'X1 {INPUT_NET[0]} leak sf rtr adap {OUTPUT_LOAD_CAP_NE
 # Additional circuit knobs that can be changed that we want to randomize and treat as parameters that can change in the circuit
 # NOTE: For the rest of the randomly constrained values, we take a four variable tuple containing as follows ("string of net name", minimum, maximum, opt_flag)
 # where the opt_flag specify binary knobs here (c for continuous, b for binary)
-KNOB_PARAMS = [("V_sf", 0.5, 0.8, 'c'), ("V_adap", 0.5, 0.8, 'c'), ("V_leak", 0.4, 0.8, 'c'), ("V_rtr", 0.5, 0.8, 'c')]  # NOTE: Default values for all of these knobs are specified in the design. We are simply changing them here.
+KNOB_PARAMS = [("V_sf", 0.3, 0.45, 'c'), ("V_adap", 1, 1.5, 'c'), ("V_leak", 0, 0.5, 'c'), ("V_rtr", 0.3, 0.5, 'c')]  # NOTE: Default values for all of these knobs are specified in the design. We are simply changing them here.
 
 
 # ---
@@ -64,7 +64,7 @@ if SPIKING_INPUT:
     CIRCUIT_FAN_OUT_RANGE = ("Circuit_Fan_Out", 1, 1, "c")      # Neuron FAN OUT range (minimum, maximum)
 
 
-    PLOT_SPIKE_BOUNDS = False                                   # Plot spike footprint after running to see whether or not we correctly capture the spike
+    PLOT_SPIKE_BOUNDS = True                                   # Plot spike footprint after running to see whether or not we correctly capture the spike
     OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint :)
     SPICE_FOOTPRINT_FILE = '../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp'
     SPIKE_START = 306
@@ -112,6 +112,7 @@ VSS_CURRENT = None
 # ----------------------------- BEGIN Model Training Hyperparameters ------------------------------ #
 DETERMINISTIC = True                    # Sets the random seeds for weight initialization to RANDOM_SEED below.  
 RANDOM_SEED = 55                        # Only if DETERMINISTIC is True. Makes the training the same every time for MLP and CatBoost
+ML_TRAIN_RUNS = None                    # Number of dataset runs used for ML training; None uses all available training runs
 PLOT_MATPLOTLIB_FIGS = False            # Show matplotlib figures
 SAVE_FIGS = True                        # Save correlation plots
 SAVE_CATBOOST_MODEL = False             # Self Explanatory. Saves all of the catboost models
