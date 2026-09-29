@@ -39,20 +39,76 @@ from torch.utils.data import DataLoader, TensorDataset
 
 RANDOM_STATE = 42
 
-def runwise_train_test_split(df, run_column='Run_Number', test_size=0.15, val_size=0.15, random_state=RANDOM_STATE):
+def resolve_training_run_count(cli_train_runs, configured_train_runs=None):
+    train_runs = cli_train_runs if cli_train_runs is not None else configured_train_runs
+    if train_runs is None or str(train_runs).lower() == 'all':
+        return None
+    try:
+        train_runs = int(train_runs)
+    except (TypeError, ValueError):
+        raise ValueError("Training run count must be a positive integer or 'all'")
+    if train_runs <= 0:
+        raise ValueError("Training run count must be greater than zero")
+    return train_runs
+
+
+def runwise_train_test_split(df, run_column='Run_Number', test_size=0.15, val_size=0.15, random_state=RANDOM_STATE, partition_df=None, max_train_runs=None):
+    split_source_df = df if partition_df is None else partition_df
+    if run_column not in split_source_df.columns:
+        raise ValueError(f"Dataset does not contain required run column: {run_column}")
+    if test_size < 0 or val_size < 0 or test_size + val_size >= 1:
+        raise ValueError("test_size and val_size must be non-negative and sum to less than 1")
+
     # Get unique run numbers
-    unique_runs = df[run_column].unique()
-    
+    unique_runs = np.sort(split_source_df[run_column].dropna().unique())
+    if len(unique_runs) == 0:
+        raise ValueError("Dataset does not contain any run numbers")
+
     # Split the unique runs into train, test and validation runs
-    train_val_runs, test_runs = train_test_split(unique_runs, test_size=test_size, random_state=RANDOM_STATE)
-    train_runs, val_runs = train_test_split(train_val_runs, test_size=val_size, random_state=RANDOM_STATE)
+    if test_size > 0:
+        train_val_runs, test_runs = train_test_split(unique_runs, test_size=test_size, random_state=random_state)
+    else:
+        train_val_runs = unique_runs
+        test_runs = np.array([], dtype=unique_runs.dtype)
+
+    if val_size > 0:
+        adjusted_val_size = val_size / (1 - test_size)
+        train_runs, val_runs = train_test_split(train_val_runs, test_size=adjusted_val_size, random_state=random_state)
+    else:
+        train_runs = train_val_runs
+        val_runs = np.array([], dtype=unique_runs.dtype)
+
+    train_runs = np.random.RandomState(random_state).permutation(np.sort(train_runs))
+    if max_train_runs is not None:
+        if max_train_runs <= 0:
+            raise ValueError("Training run count must be greater than zero")
+        if max_train_runs > len(train_runs):
+            raise ValueError(f"Requested {max_train_runs} training runs, but only {len(train_runs)} are available")
+        train_runs = train_runs[:max_train_runs]
 
     # Create train, test, and validation runs
     train_df = df[df[run_column].isin(train_runs)]
     test_df = df[df[run_column].isin(test_runs)]
     val_df = df[df[run_column].isin(val_runs)]
 
+    if train_df.empty or (test_size > 0 and test_df.empty) or (val_size > 0 and val_df.empty):
+        raise ValueError("Model-specific filtering left one or more dataset partitions empty")
+
     return train_df, test_df, val_df
+
+
+def print_runwise_split_summary(df, run_column='Run_Number', test_size=0.15, val_size=0.15, random_state=RANDOM_STATE, max_train_runs=None):
+    available_train_df, test_df, val_df = runwise_train_test_split(
+        df, run_column, test_size, val_size, random_state)
+    available_train_runs = available_train_df[run_column].nunique()
+    selected_train_runs = available_train_runs if max_train_runs is None else max_train_runs
+    if selected_train_runs > available_train_runs:
+        raise ValueError(f"Requested {selected_train_runs} training runs, but only {available_train_runs} are available")
+    print("Total Dataset Runs: {}".format(df[run_column].nunique()))
+    print("Available Training Runs: {}".format(available_train_runs))
+    print("Selected Training Runs: {}".format(selected_train_runs))
+    print("Validation Runs: {}".format(val_df[run_column].nunique()))
+    print("Test Runs: {}".format(test_df[run_column].nunique()))
 
 class TorchStandardScaler(nn.Module):
     def __init__(self):
@@ -74,9 +130,12 @@ class TorchStandardScaler(nn.Module):
         return self.transform(x)  # Apply transform as part of the forward pass
 
 
-def produce_or_load_common_standard_scalar(df, list_of_columns, ml_model_filepath, run_column="Run_Number", test_size=0.15, val_size=0.15, random_state=RANDOM_STATE, output_pytorch=False):
+def produce_or_load_common_standard_scalar(df, list_of_columns, ml_model_filepath, run_column="Run_Number", test_size=0.15, val_size=0.15, random_state=RANDOM_STATE, output_pytorch=False, partition_df=None, max_train_runs=None):
     # First check if there is already a standard scalar :O
-    std_scalar_name = 'ml_standard_scalar_random_seed_' + str(random_state)
+    train_df, test_df, val_df = runwise_train_test_split(
+        df, run_column, test_size, val_size, random_state, partition_df, max_train_runs)
+    selected_train_runs = train_df[run_column].nunique()
+    std_scalar_name = 'ml_standard_scalar_random_seed_' + str(random_state) + '_train_runs_' + str(selected_train_runs)
     joblib_scaler = os.path.join(ml_model_filepath, std_scalar_name + ".joblib")
     torch_scaler = os.path.join(ml_model_filepath, std_scalar_name + ".pth")
 
@@ -93,7 +152,6 @@ def produce_or_load_common_standard_scalar(df, list_of_columns, ml_model_filepat
     else:
         print("Making Std Scaler")
         # First split full DF after converting to ns, pJ and then train the standard scalar on the trainset.
-        train_df, test_df, val_df = runwise_train_test_split(df, run_column, test_size, val_size, random_state)
         train_df = train_df[list_of_columns]
         train_df = train_df.to_numpy()
 

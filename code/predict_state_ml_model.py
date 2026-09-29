@@ -20,9 +20,13 @@ import argparse
 from dynamic_config_load import inject_config
 parser = argparse.ArgumentParser()
 parser.add_argument("--config", required=True, help="Name of the config file (without .py)")
+parser.add_argument("--train-runs", help="Number of training runs to use, or 'all'")
+parser.add_argument("--show-split", action="store_true", help="Print the available dataset split and exit")
+parser.add_argument("--output-dir", help="Directory in which to save model run artifacts")
 args = parser.parse_args()
 
 inject_config(args.config, globals())
+max_train_runs = resolve_training_run_count(args.train_runs, globals().get('ML_TRAIN_RUNS'))
 
 # Set seeds if the run is deterministic
 if DETERMINISTIC:
@@ -33,7 +37,8 @@ figure_counter = 0
 
 # --------- BEGIN Preprocessing ---------
 # Create ML Library
-dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models")
+dataset_ml_models = os.path.join('../data', RUN_NAME, "ml_models") if args.output_dir is None else os.path.join(args.output_dir, RUN_NAME, "ml_models")
+figure_output_directory = '../results' if args.output_dir is None else os.path.join(args.output_dir, RUN_NAME, "figures")
 if not os.path.exists(dataset_ml_models):
     os.makedirs(dataset_ml_models)
 
@@ -46,6 +51,10 @@ dataset_csv_filepath = os.path.join('../data', RUN_NAME, DF_FILENAME)
 spike_data_df = pd.read_csv(dataset_csv_filepath)
 spike_data_df['Latency'] = spike_data_df['Latency'] * 10**9
 spike_data_df['Energy'] = spike_data_df['Energy'] * 10**12
+partition_df = spike_data_df
+print_runwise_split_summary(partition_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=RANDOM_SEED, max_train_runs=max_train_runs)
+if args.show_split:
+    raise SystemExit(0)
 
 # Filter rows where 'Weight' is 0
 rows_with_zero_weight = spike_data_df[spike_data_df['Weight'] == 0]
@@ -54,10 +63,10 @@ rows_with_zero_weight = spike_data_df[spike_data_df['Weight'] == 0]
 selected_columns = rows_with_zero_weight[["Cap_Voltage_At_Input_Start", 'Cap_Voltage_At_Output_End', "Weight", "Input_Total_Time", "V_sf", "V_adap", "V_leak", "V_rtr"]]
 
 # Get the standard scaler in play :O
-std_scaler = produce_or_load_common_standard_scalar(spike_data_df, LIST_OF_COLUMNS_X, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT, random_state=42)
+std_scaler = produce_or_load_common_standard_scalar(partition_df, LIST_OF_COLUMNS_X, dataset_ml_models, "Run_Number", TRAIN_TEST_SPLIT, VALIDATION_SPLIT, random_state=RANDOM_SEED, partition_df=partition_df, max_train_runs=max_train_runs)
 
 # Train Test Split
-train_df, test_df, val_df = runwise_train_test_split(spike_data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=42)
+train_df, test_df, val_df = runwise_train_test_split(spike_data_df, test_size=TRAIN_TEST_SPLIT, val_size=VALIDATION_SPLIT, random_state=RANDOM_SEED, partition_df=partition_df, max_train_runs=max_train_runs)
 X_train = train_df[LIST_OF_COLUMNS_X]
 y_train = train_df[["Cap_Voltage_At_Output_End"]]
 X_test = test_df[LIST_OF_COLUMNS_X]
@@ -179,7 +188,8 @@ for spine in plt.gca().spines.values():
     spine.set_linewidth(2.5)
 plt.tight_layout()
 if SAVE_FIGS:
-    plt.savefig('../results/mlp_neuron_state_model_correlation_plot.png', format='png', dpi=400)
+    os.makedirs(figure_output_directory, exist_ok=True)
+    plt.savefig(os.path.join(figure_output_directory, 'mlp_neuron_state_model_correlation_plot.png'), format='png', dpi=400)
 
 # -------------------------------
 # Print and write the table to the file
