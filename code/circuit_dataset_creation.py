@@ -90,14 +90,20 @@ else:
 SIMULATOR = hyperparameters_dict["SIMULATOR"]
 SPIKING_INPUT= hyperparameters_dict["SPIKING_INPUT"]
 CIRCUIT_STATEFUL = hyperparameters_dict["CIRCUIT_STATEFUL"]
+inputs_fp = os.path.join(run_directory, 'input_tracking.csv')
 
-if not SPIKING_INPUT:
+if SPIKING_INPUT:
+    if os.path.exists(inputs_fp):
+        inputs_df = pd.read_csv(inputs_fp)
+        spiking_input_per_timestep = inputs_df.set_index(["Run_Number", "Digital_Timestep"])["Value"]
+    else:
+        spiking_input_per_timestep = None
+        print("WARNING: input_tracking.csv not found. Using legacy input spike detection.")
+else:
     # Since multiple inputs, need to just include all things into the columns
     columns += INPUT_NAME
 
     # Open up input guide and pivot table such that all the inputs for each run, timestep are on one line :)
-    inputs_fp = os.path.join(run_directory, 'input_tracking.csv')
-
     inputs_df = pd.read_csv(inputs_fp)
 
     # Pivot the DataFrame
@@ -427,7 +433,12 @@ for i in range(NUMBER_OF_RAW_RUNS):
                 plt.text(time_vec[start_index]*10**9, .5, f'{j}', rotation=90, verticalalignment='bottom', fontsize=8)
 
             # First look for input spike. If there is no input spike, there is no output spike...
-            spike_found, input_start_spike_index, input_end_spike_index = identify_nice_input_spike(input_mask, np.max([start_index-1,0]), np.min([end_index+1, len(time_vec)-1]))
+            if spiking_input_per_timestep is not None:
+                spike_found = (i, j) in spiking_input_per_timestep.index
+                if spike_found:
+                    input_weight = spiking_input_per_timestep.loc[(i, j)]
+            else:
+                spike_found, input_start_spike_index, input_end_spike_index = identify_nice_input_spike(input_mask, np.max([start_index-1,0]), np.min([end_index+1, len(time_vec)-1]))
 
             if spike_found:
                 # Spike found, that means that if there are any timing events, they end here.
@@ -477,7 +488,10 @@ for i in range(NUMBER_OF_RAW_RUNS):
                     print(f"Spike Event Timestep: {start_index}:{end_index}")
 
                 # Get the peak index for the spike for latency calculations :)
-                spike_peak_index = np.argmax(np.abs(input_spikes[input_start_spike_index:input_end_spike_index+1])) + input_start_spike_index # Note: make sure to plus one to include input_end_spike_index in there
+                if spiking_input_per_timestep is not None:
+                    spike_peak_index = np.argmax(np.abs(input_spikes[start_index:end_index+1])) + start_index
+                else:
+                    spike_peak_index = np.argmax(np.abs(input_spikes[input_start_spike_index:input_end_spike_index+1])) + input_start_spike_index # Note: make sure to plus one to include input_end_spike_index in there
 
                 plt.axvline(time_vec[spike_peak_index]*10**9, color='blue')
 
@@ -492,11 +506,17 @@ for i in range(NUMBER_OF_RAW_RUNS):
 
                 # Input Spike Details
                 footprint_spike_charge = hyperparameters_dict["FOOTPRINT_CHARGE"]
-                spike_charge =  np.trapz(input_spikes[input_start_spike_index:input_end_spike_index+1], time_vec[input_start_spike_index:input_end_spike_index+1])
+                if spiking_input_per_timestep is not None:
+                    spike_charge = input_weight * footprint_spike_charge
+                else:
+                    spike_charge =  np.trapz(input_spikes[input_start_spike_index:input_end_spike_index+1], time_vec[input_start_spike_index:input_end_spike_index+1])
                 spike_event["Input_Peak_Amplitude"] = input_spikes[spike_peak_index]
                 spike_event["Input_Total_Charge"] = spike_charge
                 spike_event["Input_Total_Time"] = (timesteps_without_events+1) * one_time_period   # Need to include all of 124 inside of 124, since no step 125 :)
-                spike_event["Weight"] = spike_charge / footprint_spike_charge      
+                if spiking_input_per_timestep is not None:
+                    spike_event["Weight"] = input_weight
+                else:
+                    spike_event["Weight"] = spike_charge / footprint_spike_charge
                 #print(f"Spike Event: Run: {i}, Timestep: {j}, Weight: {spike_charge / footprint_spike_charge}")
 
                 # I/O

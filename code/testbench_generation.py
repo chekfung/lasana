@@ -115,11 +115,10 @@ if SPIKING_INPUT:
 # Generate PWL files for all input runs
 
 # Create Inputs File 
-if not SPIKING_INPUT:
-    inputs_filepath_tracking = os.path.join(run_directory, 'input_tracking.csv')
-    inputs_fd = open(inputs_filepath_tracking, 'w')
-    header = 'Run_Number,Input_Net_Name,Digital_Timestep,Value\n'
-    inputs_fd.write(header)
+inputs_filepath_tracking = os.path.join(run_directory, 'input_tracking.csv')
+inputs_fd = open(inputs_filepath_tracking, 'w')
+header = 'Run_Number,Input_Net_Name,Digital_Timestep,Value\n'
+inputs_fd.write(header)
 
 # Setup which runs will be all negative / all positive
 run_input_same_sign = np.random.choice([0, 1], size=NUMBER_OF_RUNS, p=[1-SAME_SIGN_WEIGHTS_FRACTION, SAME_SIGN_WEIGHTS_FRACTION])
@@ -161,7 +160,15 @@ while (current_runs < NUMBER_OF_RUNS):
                     # Otherwise, clip high weight to 0 
                     high_weight = 0
 
-            input_vector = generate_output_vector(spike_map, spike_footprint, low_weight, high_weight)
+            input_vector, weight_map = generate_output_vector(spike_map, spike_footprint, low_weight, high_weight, return_weights=True)
+
+            num_samples = int(total_sim_time_s * sampling_frequency)
+            num_digital_samples = int(total_sim_time_s * DIGITAL_FREQUENCY)
+            digital_index_step = int(num_samples / num_digital_samples)
+            for input_index in np.where(spike_map > 0)[0]:
+                digital_timestep = input_index // digital_index_step
+                format = f"{current_runs},{net_name},{digital_timestep},{weight_map[input_index]}\n"
+                inputs_fd.write(format)
             
             if PLOT_SPIKE_BOUNDS:
                 plt.figure(0)
@@ -269,8 +276,7 @@ while (current_runs < NUMBER_OF_RUNS):
     # Increment current runs
     current_runs+=1
 
-if not SPIKING_INPUT:
-    inputs_fd.close()
+inputs_fd.close()
 
 current_sim_runs = 0
 runs = []

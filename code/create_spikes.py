@@ -264,20 +264,23 @@ def generate_spike_map(num_neurons: int, num_spikes: int, refractory_period: int
 
     return spike_map
 
-def generate_output_vector(spike_map: np.ndarray, spike_footprint: np.ndarray, weight_low: float, weight_high: float) -> np.ndarray:
+def generate_output_vector(spike_map: np.ndarray, spike_footprint: np.ndarray, weight_low: float, weight_high: float, return_weights=False) -> np.ndarray:
     """
     Generate an output vector from a spike map and a spike footprint.
 
     Args:
         spike_map (np.ndarray): A one-dimensional array representing the spike map.
         spike_footprint (np.ndarray): A one-dimensional array representing the spike footprint.
+        return_weights (bool): Whether to also return the weight applied at each spike-map index.
 
     Returns:
-        np.ndarray: A one-dimensional array representing the output vector.
+        np.ndarray: The output vector, or the output vector and weight map when requested.
     """
 
     # Initialize the output vector
     output_vector = np.zeros_like(spike_map, dtype=np.float64)
+    if return_weights:
+        weight_map = np.zeros_like(spike_map, dtype=np.float64)
 
     # Iterate over the spike map
     for i in range(len(spike_map)):
@@ -289,7 +292,11 @@ def generate_output_vector(spike_map: np.ndarray, spike_footprint: np.ndarray, w
             end_idx = min(i + len(spike_footprint), len(output_vector))
 
             output_vector[start_idx:end_idx] += spike_footprint[:end_idx-start_idx] * weights[0]
+            if return_weights:
+                weight_map[i] = weights[0]
 
+    if return_weights:
+        return output_vector, weight_map
     return output_vector
 
 def create_pwl_file(filename, time_vector, output_vector):
