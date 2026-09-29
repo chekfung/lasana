@@ -10,13 +10,13 @@ Author: Jason Ho
 
 # List of Python file names you want to execute
 python_files = [
-    "testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
-    "circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
-    # "predict_dynamic_energy_ml_model.py",
-    # "predict_latency_ml_model.py",
-    # "predict_state_ml_model.py",
-    # "predict_spike_behavior_ml_model.py",
-    # "predict_static_energy_ml_model.py"
+    #"testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    #"circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
+    "predict_dynamic_energy_ml_model.py",
+    "predict_latency_ml_model.py",
+    "predict_state_ml_model.py",
+    "predict_spike_behavior_ml_model.py",
+    "predict_static_energy_ml_model.py"
 ]  
 
 python_files_pcm_crossbar = [
@@ -85,10 +85,6 @@ if __name__ == "__main__":
     print('\n\n---------------------------------------')
     print(f"Running the following files for Spiking Neuron: [{python_files}]")
     run_python_files(python_files, '--config', CONFIG_SPIKING_NEURON)
-
-    # FIXME: Temp: only run the spiking neuron
-    exit()
-
 
     # Run LASANA for PCM crossbar with gain of 10
     CONFIG_DIFF_10 = 'config_pcm_crossbar_gain_10'
