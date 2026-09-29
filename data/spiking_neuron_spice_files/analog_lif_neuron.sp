@@ -1,5 +1,5 @@
 * include Libraries for the 45nm LP PTM Model
-.include "../libraries/45nm_LP.pm"
+.include "libraries/45nm_LP.pm"
 
 * Create subcircuit for the neuron
 * Assume that PMOS is just 2x width of NMOS
@@ -10,7 +10,7 @@ Cmem spike_in gnd 500fF IC=0V
 
 * Source Follower (increase linear integration, modulate neuron threshold voltage)
 M1 vdd spike_in v_in gnd NMOS l=0.045u w=0.3u
-M2 v_in v_sf gnd gnd NMOS l=0.045u w=0.3u
+M2 v_in v_sf gnd gnd NMOS l=0.045u w=1u
 
 * Inverter (reduces switching short-circuit currents at input)
 M3 m3_gate m3_gate vdd vdd PMOS l=0.045u w=0.6u
@@ -27,7 +27,7 @@ M8 m8_m9 m8_m9 vdd vdd PMOS l=0.045u w=0.6u
 M9 v_o2 v_o1 m8_m9 vdd PMOS l=0.045u w=0.6u
 M10 v_o2 v_o1 m10_m11_net gnd NMOS l=0.045u w=0.3u
 
-M11 m10_m11_net v_rtr gnd gnd NMOS l=0.045u w=0.6u
+M11 m10_m11_net v_rtr gnd gnd NMOS l=0.045u w=1u
 
 M12 spike_in v_o2 gnd gnd NMOS l=0.045u w=2.5u
 
