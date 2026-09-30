@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib
-matplotlib.use('Agg') # set the backend before importing pyplot
+matplotlib.use('TkAgg') # set the backend before importing pyplot
 import matplotlib.pyplot as plt
 import time
 import bisect
@@ -336,7 +336,7 @@ def interpolate_spike_footprint_to_sampling_frequency(spike_footprint, spike_foo
     # First error checking to make sure that spike footprint and spike_footprint_time are the same size
     if len(spike_footprint) != len(spike_footprint_time):
         print("Error Occurred in interpolate_spike_footprint_to_sampling_frequency. Spike footprint length not equal to spike_footprint_time")
-
+    
     spike_footprint_total_time = spike_footprint_time[-1] - spike_footprint_time[0] 
     num_samples_in_spike = int(spike_footprint_total_time / sampling_period)
     interpolated_spike_time = np.linspace(0, spike_footprint_total_time, num_samples_in_spike)

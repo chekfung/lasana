@@ -1,5 +1,5 @@
 * include Libraries for the 45nm LP PTM Model
-.include "libraries/45nm_LP.pm"
+.include "../libraries/45nm_LP.pm"
 
 * Create subcircuit for the neuron
 * Assume that PMOS is just 2x width of NMOS

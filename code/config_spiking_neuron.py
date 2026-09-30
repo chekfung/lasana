@@ -1,6 +1,6 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Spiking Circuit Run Hyperparameters
-RUN_NAME = 'spiking_neuron_run'                             # Name of the run that will be created in data/
+RUN_NAME = 'spiking_neuron_run_20k_new_neuron'                             # Name of the run that will be created in data/
 NUMBER_OF_RUNS = 20000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
@@ -64,11 +64,11 @@ if SPIKING_INPUT:
     CIRCUIT_FAN_OUT_RANGE = ("Circuit_Fan_Out", 1, 1, "c")      # Neuron FAN OUT range (minimum, maximum)
 
 
-    PLOT_SPIKE_BOUNDS = True                                   # Plot spike footprint after running to see whether or not we correctly capture the spike
+    PLOT_SPIKE_BOUNDS = False                                   # Plot spike footprint after running to see whether or not we correctly capture the spike
     OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint :)
     SPICE_FOOTPRINT_FILE = '../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp'
-    SPIKE_START = 306
-    SPIKE_END = 361
+    SPIKE_START = 21
+    SPIKE_END = 56
 
     # Block Spike
     # Note: We denote block spike as a PWM of a set voltage where the height of the block is determined by the raw spike
