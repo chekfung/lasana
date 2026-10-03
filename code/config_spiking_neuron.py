@@ -44,8 +44,42 @@ KNOB_PARAMS = [("V_sf", 0.3, 0.45, 'c'), ("V_adap", 1, 1.5, 'c'), ("V_leak", 0, 
 INPUT_CURRENT_SRC = True
 
 NUMBER_OF_WEIGHTS = 1                                           # In the spiking input case, the weight is tied directly to a spike. 
+
+# This uniform distribution was used for the MLCAD 2025 and Code Ocean
+# datasets. Set this to False to use the newer normal distribution.
+USE_UNIFORM_DISTRIBUTION = True
+WEIGHT_RANDOM_SEED = 42
+
+# Uniform Weight Distribution
 WEIGHT_LOW = -2                                                 # If custom spike input, relative to input weight ; Otherwise, 
 WEIGHT_HIGH = 2                                                 # If custom spiek input, relative to input weight; Otherwise, 
+
+# Normal Weight Distribution
+NORMAL_WEIGHT_MEAN = 0.0
+NORMAL_WEIGHT_STANDARD_DEVIATION = 1.0
+
+def sample_event_weight(rng, num_firings):
+    """Sample the aggregate weight applied at one occupied input timestep."""
+    if USE_UNIFORM_DISTRIBUTION:
+        # Original MLCAD 2025 and Code Ocean distribution. One aggregate
+        # uniform draw uses a range scaled by simultaneous firing count.
+        sampled_weight = rng.uniform(
+            WEIGHT_LOW * num_firings,
+            WEIGHT_HIGH * num_firings,
+        )
+
+    else:
+        # Draw one normally distributed contribution for every simultaneous
+        # firing, then combine them into the aggregate circuit input.
+        sampled_weights = rng.normal(
+            loc=NORMAL_WEIGHT_MEAN,
+            scale=NORMAL_WEIGHT_STANDARD_DEVIATION,
+            size=num_firings,
+        )
+
+        sampled_weight = sampled_weights.sum()
+
+    return sampled_weight
 
 if SPIKING_INPUT:
     # Input Spike Footprint Generation

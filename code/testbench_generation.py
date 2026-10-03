@@ -20,6 +20,8 @@ args = parser.parse_args()
 
 inject_config(args.config, globals())
 
+weight_rng = np.random.default_rng(WEIGHT_RANDOM_SEED)
+
 # ======================
 '''
 This file is solely used to run SPICE simulations to characterize an analog circuit implemented in SPICE. (File 1 of creation of the dataset)
@@ -146,8 +148,7 @@ while (current_runs < NUMBER_OF_RUNS):
                 continue
 
             # Applies random weight to each of the spikes in the spike map
-            low_weight = WEIGHT_LOW
-            high_weight = WEIGHT_HIGH
+            weight_sign = None
 
             if run_input_same_sign[current_runs]:
                 # All inputs have the same sign 
@@ -155,12 +156,12 @@ while (current_runs < NUMBER_OF_RUNS):
 
                 if results_all_positive:
                     # if all results positive 
-                    low_weight = 0
+                    weight_sign = 1
                 else:
-                    # Otherwise, clip high weight to 0 
-                    high_weight = 0
+                    # Otherwise, make all results negative
+                    weight_sign = -1
 
-            input_vector, weight_map = generate_output_vector(spike_map, spike_footprint, low_weight, high_weight, return_weights=True)
+            input_vector, weight_map = generate_output_vector(spike_map, spike_footprint, weight_rng, sample_event_weight, weight_sign, return_weights=True)
 
             num_samples = int(total_sim_time_s * sampling_frequency)
             num_digital_samples = int(total_sim_time_s * DIGITAL_FREQUENCY)

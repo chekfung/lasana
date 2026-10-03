@@ -264,7 +264,7 @@ def generate_spike_map(num_neurons: int, num_spikes: int, refractory_period: int
 
     return spike_map
 
-def generate_output_vector(spike_map: np.ndarray, spike_footprint: np.ndarray, weight_low: float, weight_high: float, return_weights=False) -> np.ndarray:
+def generate_output_vector(spike_map: np.ndarray, spike_footprint: np.ndarray, weight_rng, sample_event_weight, weight_sign, return_weights=False) -> np.ndarray:
     """
     Generate an output vector from a spike map and a spike footprint.
 
@@ -287,13 +287,20 @@ def generate_output_vector(spike_map: np.ndarray, spike_footprint: np.ndarray, w
         # Check if there is a spike at this time
         if spike_map[i] > 0:
             num_firings = spike_map[i]
-            weights = np.random.uniform(weight_low * num_firings, weight_high*num_firings,size=1)
+            sampled_weight = sample_event_weight(weight_rng, num_firings)
+
+            # Preserve runs containing only positive or negative inputs.
+            if weight_sign == 1:
+                sampled_weight = abs(sampled_weight)
+            elif weight_sign == -1:
+                sampled_weight = -abs(sampled_weight)
+
             start_idx = i
             end_idx = min(i + len(spike_footprint), len(output_vector))
 
-            output_vector[start_idx:end_idx] += spike_footprint[:end_idx-start_idx] * weights[0]
+            output_vector[start_idx:end_idx] += spike_footprint[:end_idx-start_idx] * sampled_weight
             if return_weights:
-                weight_map[i] = weights[0]
+                weight_map[i] = sampled_weight
 
     if return_weights:
         return output_vector, weight_map
