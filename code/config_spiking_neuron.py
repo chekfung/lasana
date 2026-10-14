@@ -1,6 +1,6 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Spiking Circuit Run Hyperparameters
-RUN_NAME = 'spiking_neuron_run_20k_new_neuron'                             # Name of the run that will be created in data/
+RUN_NAME = 'spiking_neuron_run_20k_new_neuron_original_new_circuit_10_13_26'                             # Name of the run that will be created in data/
 NUMBER_OF_RUNS = 20000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
@@ -36,13 +36,12 @@ SUBCIRCUIT_DEFINITION = f'X1 {INPUT_NET[0]} leak sf rtr adap {OUTPUT_LOAD_CAP_NE
 # Additional circuit knobs that can be changed that we want to randomize and treat as parameters that can change in the circuit
 # NOTE: For the rest of the randomly constrained values, we take a four variable tuple containing as follows ("string of net name", minimum, maximum, opt_flag)
 # where the opt_flag specify binary knobs here (c for continuous, b for binary)
-KNOB_PARAMS = [("V_sf", 0.3, 0.45, 'c'), ("V_adap", 1, 1.5, 'c'), ("V_leak", 0, 0.5, 'c'), ("V_rtr", 0.3, 0.5, 'c')]  # NOTE: Default values for all of these knobs are specified in the design. We are simply changing them here.
+KNOB_PARAMS = [("V_sf", 0.5, 0.8, 'c'), ("V_adap", 0.5, 0.8, 'c'), ("V_leak", 0.4, 0.8, 'c'), ("V_rtr", 0.5, 0.8, 'c')]  # NOTE: Default values for all of these knobs are specified in the design. We are simply changing them here.
 
 
 # ---
 # Spiking Neuron Input Parameters
 INPUT_CURRENT_SRC = True
-
 NUMBER_OF_WEIGHTS = 1                                           # In the spiking input case, the weight is tied directly to a spike. 
 
 # This uniform distribution was used for the MLCAD 2025 and Code Ocean
@@ -149,7 +148,7 @@ RANDOM_SEED = 55                        # Only if DETERMINISTIC is True. Makes t
 ML_TRAIN_RUNS = None                    # Number of dataset runs used for ML training; None uses all available training runs
 PLOT_MATPLOTLIB_FIGS = False            # Show matplotlib figures
 SAVE_FIGS = True                        # Save correlation plots
-SAVE_CATBOOST_MODEL = False             # Self Explanatory. Saves all of the catboost models
+SAVE_CATBOOST_MODEL = True              # Self Explanatory. Saves all of the catboost models
 SAVE_CATBOOST_CPP = False               # Saves Catboost but in C++ 
 SAVE_MLP_MODEL = True                   # Save MLP, sklearn models
 SAVE_PYTORCH_MLP_MODEL = False          # Save MLP, PyTorch models (not supported right now)

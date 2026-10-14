@@ -183,3 +183,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 .DS_Store
+data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run_sim_log.txt
+data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.raw/logFile
+data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.raw/timeSweep.tran.tran
+data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.raw/timeSweep.tran.tran.cache

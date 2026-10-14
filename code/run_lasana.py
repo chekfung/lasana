@@ -12,11 +12,11 @@ Author: Jason Ho
 python_files = [
     "testbench_generation.py",             # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
     "circuit_dataset_creation.py",         # Script disabled as requires spectre, hspice installation which is not available in Code Ocean
-    # "predict_dynamic_energy_ml_model.py",
-    # "predict_latency_ml_model.py",
-    # "predict_state_ml_model.py",
-    # "predict_spike_behavior_ml_model.py",
-    # "predict_static_energy_ml_model.py"
+    "predict_dynamic_energy_ml_model.py",
+    "predict_latency_ml_model.py",
+    "predict_state_ml_model.py",
+    "predict_spike_behavior_ml_model.py",
+    "predict_static_energy_ml_model.py"
 ]  
 
 python_files_pcm_crossbar = [
