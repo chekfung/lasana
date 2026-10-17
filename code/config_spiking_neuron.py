@@ -1,7 +1,7 @@
 # ----------------------------- BEGIN Generate Dataset Hyperparameters ------------------------------ #
 # Spiking Circuit Run Hyperparameters
-RUN_NAME = 'spiking_neuron_run_20k_new_neuron_original_new_circuit_10_13_26'                             # Name of the run that will be created in data/
-NUMBER_OF_RUNS = 20000                                       # Number of testbenches / randomized SPICE runs
+RUN_NAME = 'spiking_neuron_run_2k_new_neuron_original_params_fix_footprint_normal_dist_10_16_26'                             # Name of the run that will be created in data/
+NUMBER_OF_RUNS = 2000                                       # Number of testbenches / randomized SPICE runs
 NUM_PROCESSES = 20                                          # Maximum number of processes that can be spun for SPICE simulations (NOTE: Each process uses a CAD license)
 TOTAL_TIME_NS = 500                                         # Nanoseconds of runtime / SPICE simulation run
 SIM_MIN_STEP_SIZE_NS = 0.01                                 # Minimum step size in nanoseconds of the simulation 
@@ -36,7 +36,7 @@ SUBCIRCUIT_DEFINITION = f'X1 {INPUT_NET[0]} leak sf rtr adap {OUTPUT_LOAD_CAP_NE
 # Additional circuit knobs that can be changed that we want to randomize and treat as parameters that can change in the circuit
 # NOTE: For the rest of the randomly constrained values, we take a four variable tuple containing as follows ("string of net name", minimum, maximum, opt_flag)
 # where the opt_flag specify binary knobs here (c for continuous, b for binary)
-KNOB_PARAMS = [("V_sf", 0.5, 0.8, 'c'), ("V_adap", 0.5, 0.8, 'c'), ("V_leak", 0.4, 0.8, 'c'), ("V_rtr", 0.5, 0.8, 'c')]  # NOTE: Default values for all of these knobs are specified in the design. We are simply changing them here.
+KNOB_PARAMS = [("V_sf", 0.5, 0.8, 'c'), ("V_adap", 0.5, 0.8, 'c'), ("V_leak", 0.5, 0.8, 'c'), ("V_rtr", 0.5, 0.8, 'c')]  # NOTE: Default values for all of these knobs are specified in the design. We are simply changing them here.
 
 
 # ---
@@ -46,7 +46,7 @@ NUMBER_OF_WEIGHTS = 1                                           # In the spiking
 
 # This uniform distribution was used for the MLCAD 2025 and Code Ocean
 # datasets. Set this to False to use the newer normal distribution.
-USE_UNIFORM_DISTRIBUTION = True
+USE_UNIFORM_DISTRIBUTION = False
 WEIGHT_RANDOM_SEED = 42
 
 # Uniform Weight Distribution
@@ -101,7 +101,7 @@ if SPIKING_INPUT:
     OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint :)
     SPICE_FOOTPRINT_FILE = '../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp'
     SPIKE_START = 21
-    SPIKE_END = 56
+    SPIKE_END = 55
 
     # Block Spike
     # Note: We denote block spike as a PWM of a set voltage where the height of the block is determined by the raw spike

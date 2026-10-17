@@ -48,18 +48,13 @@ M20 spike_in v_lk gnd gnd NMOS l=0.045u w=1u
 
 .ends
 
-* Declaration of all the inputs
-* v_sf, v_leak, v_rtr should be all subthreshold
-* Higher v_rtr means shorter refractory time
-* v_sf 0.3 - 0.45
-* v_adap 1 - 1.5V
-* v_leak 0-0.5
-* rtr 0.3 - 0.5
-* We intentionally choose the middle numbers for the footprint.
-V_sf sf 0 0.375
-V_adap adap 0 1.25
-V_leak lk 0 0.4
-V_rtr rtr 0 0.4
+
+* intentionally chose 0.5 for all and 0.57 for leak which is default
+* in which takes 2 cycles to leak everything, which is close to teh snntorch
+V_sf sf 0 0.5
+V_adap adap 0 0.5
+V_leak lk 0 0.57
+V_rtr rtr 0 0.5
 Vdd vdd 0 1.5
 Vdd_generate vdd_2 0 1.5
 
