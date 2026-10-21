@@ -161,8 +161,10 @@ hyperparameters_mlp = {
     'alpha': 0.0001,
     'learning_rate_init': 0.01,
     'tol':1e-5,
-    'early_stopping':True,
-    'validation_fraction': VALIDATION_SPLIT
+    # The partial-fit helper uses these settings to early-stop against the
+    # explicit runwise validation set; sklearn's internal split is disabled.
+    'max_iter': 200,
+    'n_iter_no_change': 10
 }
 
 if DETERMINISTIC:

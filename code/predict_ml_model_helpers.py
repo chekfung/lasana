@@ -4,6 +4,7 @@ import pandas as pd
 import os
 import time
 import joblib
+import copy
 
 # Regressors
 from scipy.interpolate import NearestNDInterpolator
@@ -22,7 +23,7 @@ from sklearn.linear_model import LogisticRegression
 
 # Metrics and Statistics
 from sklearn.metrics import mean_squared_error, r2_score,mean_absolute_percentage_error, mean_absolute_error    # regressor
-from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score    # classifier
+from sklearn.metrics import accuracy_score, roc_auc_score, precision_score, recall_score, f1_score   # classifier
 from sklearn.model_selection import train_test_split
 
 # Visualization
@@ -38,6 +39,41 @@ from torch.utils.data import DataLoader, TensorDataset
 
 
 RANDOM_STATE = 42
+
+
+def manual_early_stopping_parameters(hyperparams):
+    """Separate estimator parameters from external stopping settings."""
+    estimator_params = dict(hyperparams)
+    max_epochs = int(estimator_params.get('max_iter', 200))
+    patience = int(estimator_params.get('n_iter_no_change', 10))
+    min_delta = float(estimator_params.get('tol', 1e-5))
+
+    if max_epochs <= 0:
+        raise ValueError("MLP max_iter must be greater than zero")
+    if patience <= 0:
+        raise ValueError("MLP n_iter_no_change must be greater than zero")
+    if min_delta < 0:
+        raise ValueError("MLP tol must be non-negative")
+    if estimator_params.get('solver', 'adam') not in {'adam', 'sgd'}:
+        raise ValueError("Manual partial_fit training requires the adam or sgd solver")
+
+    # Keep one advancing, reproducible shuffle sequence across partial_fit calls.
+    random_state = estimator_params.get('random_state')
+    if isinstance(random_state, (int, np.integer)):
+        estimator_params['random_state'] = np.random.RandomState(
+            int(random_state))
+
+    estimator_params['early_stopping'] = False
+    estimator_params.pop('validation_fraction', None)
+    return estimator_params, max_epochs, patience, min_delta
+
+
+def _save_mlp_training_history(history, model_name, save_model):
+    """Write a compact epoch history beside a saved joblib model."""
+    if save_model:
+        pd.DataFrame(history).to_csv(
+            model_name + '_training_history.csv', index=False)
+
 
 def resolve_training_run_count(cli_train_runs, configured_train_runs=None):
     train_runs = cli_train_runs if cli_train_runs is not None else configured_train_runs
@@ -288,33 +324,69 @@ def run_catboost_regression(X_train, X_test, X_val, y_train, y_test, y_val, hype
     return y_pred, train_time, inference_time
 
 def train_mlp_regression(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams, std_scaler, save_model=False, model_name=""):
-    # Since Sklearn's MLP is weird, combine X_train and X_val back together
-    # Combine train and validation sets into one dataframe
-    combined_X_train = pd.concat([X_train, X_val])
-    combined_y_val = np.concatenate([y_train, y_val])
+    # Prep inputs and perform scaler transform on train, val, test
+    # JH (10/20/26): This historically changed because we needed to support runwise validation which was not possible
+    #                in the original MLPRegressor.fit
+    X_train_scaled = std_scaler.transform(X_train.to_numpy())
+    X_val_scaled = std_scaler.transform(X_val.to_numpy())
+    X_test_scaled = std_scaler.transform(X_test.to_numpy())
+    y_train = np.asarray(y_train).reshape(-1)
+    y_val = np.asarray(y_val).reshape(-1)
 
-    # Initialize the MLPRegressor with hyperparameters
-    mlp = MLPRegressor(**hyperparams)
+    # Remove old early stopping params from showing up in hyperparam dict (since partial fit does not support anymore)
+    estimator_params, max_epochs, patience, min_delta = manual_early_stopping_parameters(hyperparams)
+    mlp = MLPRegressor(**estimator_params)
 
-    # Train the model
+    # Expose and train one epoch at a time
     start_time = time.time()
-    X_train_scaled = std_scaler.transform(combined_X_train.to_numpy())
-    mlp.fit(X_train_scaled, combined_y_val)
+    best_model = None
+    best_validation_r2 = -np.inf
+    epochs_without_improvement = 0
+    history = []
+
+    for epoch in range(max_epochs):
+        mlp.partial_fit(X_train_scaled, y_train)
+        validation_r2 = float(mlp.score(X_val_scaled, y_val))
+
+        # Training patience
+        if validation_r2 < best_validation_r2 + min_delta:
+            epochs_without_improvement += 1
+        else:
+            epochs_without_improvement = 0
+
+        checkpoint_saved = validation_r2 > best_validation_r2
+        if checkpoint_saved:
+            best_validation_r2 = validation_r2
+            best_model = copy.deepcopy(mlp)
+
+        history.append({
+            'epoch': epoch + 1,
+            'training_loss': float(mlp.loss_),
+            'validation_r2': validation_r2,
+            'checkpoint_saved': checkpoint_saved,
+        })
+
+        if epochs_without_improvement > patience:
+            break
+
+    if best_model is None:
+        raise RuntimeError("MLP regressor did not produce a valid validation checkpoint")
+
+    mlp = best_model
     end_time = time.time()
     train_time = end_time - start_time
-    
-    # Make predictions
+
+    # Run test partition with the best checkpoint.
     start_time = time.time()
-    X_test_scaled = std_scaler.transform(X_test.to_numpy())
     y_pred = mlp.predict(X_test_scaled)
     end_time = time.time()
     inference_time = end_time - start_time
 
-    # Save model using joblib
+    # Save model
     if save_model:
         joblib.dump(mlp, model_name+'.joblib')
+    _save_mlp_training_history(history, model_name, save_model)
 
-    
     return y_pred, train_time, inference_time
 
 # ---------- END other ML Regression Methods Methods ----------
@@ -411,33 +483,82 @@ def run_catboost_classify(X_train, X_test, X_val, y_train, y_test, y_val, hyperp
 
     return y_pred, train_time, inference_time
 
-def train_mlp_classify(X_train, X_test, X_val, y_train, y_test, y_val, hyperparams, std_scaler, save_model=False, model_name=""):
-    # Since Sklearn's MLP is weird, combine X_train and X_val back together
-    # Combine train and validation sets into one dataframe
-    combined_X_train = pd.concat([X_train, X_val])
-    combined_y_val = np.concatenate([y_train, y_val])
-    
-    # Initialize the MLPRegressor with hyperparameters
-    mlp = MLPClassifier(**hyperparams)
+def train_mlp_classify(X_train, X_test, X_val, y_train, y_test, y_val,
+                       hyperparams, std_scaler, save_model=False,
+                       model_name=""):
+    # Prep inputs and perform scaler transform on train, val, test
+    # JH (10/20/26): This historically changed because we needed to support runwise validation which was not possible
+    #                in the original MLPClassifier.fit
+    X_train_scaled = std_scaler.transform(X_train.to_numpy())
+    X_val_scaled = std_scaler.transform(X_val.to_numpy())
+    X_test_scaled = std_scaler.transform(X_test.to_numpy())
+    y_train = np.asarray(y_train).reshape(-1)
+    y_val = np.asarray(y_val).reshape(-1)
 
-    # Train the model
+    classes = np.unique(y_train)
+    if not np.array_equal(classes, np.array([0, 1])):
+        raise ValueError("MLP classifier training requires both binary classes 0 and 1")
+
+    # Remove old early stopping params from showing up in hyperparam dict (since partial fit does not support anymore)
+    estimator_params, max_epochs, patience, min_delta = manual_early_stopping_parameters(hyperparams)
+    mlp = MLPClassifier(**estimator_params)
+
+    # Expose and train one epoch at a time. Use softmax cutoff of 0.5 for determining 0 or 1 class
+    # We specifically use F1 for optimizing rather than using accuracy, as F1 is better for imbalanced datasets (10/20/26)
     start_time = time.time()
-    X_train_scaled = std_scaler.transform(combined_X_train.to_numpy())
-    mlp.fit(X_train_scaled, combined_y_val)
+    best_model = None
+    best_validation_f1 = -np.inf
+    epochs_without_improvement = 0
+    history = []
+
+    for epoch in range(max_epochs):
+        if epoch == 0:
+            # Need to expose which classes there are if first epoch
+            mlp.partial_fit(X_train_scaled, y_train, classes=classes)
+        else:
+            mlp.partial_fit(X_train_scaled, y_train)
+
+        validation_prediction = mlp.predict(X_val_scaled)
+        validation_f1 = float(f1_score(y_val, validation_prediction, zero_division=0))
+
+        # Training patience
+        if validation_f1 < best_validation_f1 + min_delta:
+            epochs_without_improvement += 1
+        else:
+            epochs_without_improvement = 0
+
+        checkpoint_saved = validation_f1 > best_validation_f1
+        if checkpoint_saved:
+            best_validation_f1 = validation_f1
+            best_model = copy.deepcopy(mlp)
+
+        history.append({
+            'epoch': epoch + 1,
+            'training_loss': float(mlp.loss_),
+            'validation_f1': validation_f1,
+            'checkpoint_saved': checkpoint_saved,
+        })
+
+        if epochs_without_improvement > patience:
+            break
+
+    if best_model is None:
+        raise RuntimeError("MLP classifier did not produce a valid validation checkpoint")
+    mlp = best_model
     end_time = time.time()
     train_time = end_time - start_time
-    
-    # Make predictions
+
+    # Run test partition with the best checkpoint.
     start_time = time.time()
-    X_test_scaled = std_scaler.transform(X_test.to_numpy())
     y_pred = mlp.predict(X_test_scaled)
     end_time = time.time()
     inference_time = end_time - start_time
 
-    # Save model using joblib
+    # Save model
     if save_model:
         joblib.dump(mlp, model_name+'.joblib')
-    
+    _save_mlp_training_history(history, model_name, save_model)
+
     return y_pred, train_time, inference_time
 
 # ---------- END ML Classification Methods Methods ----------

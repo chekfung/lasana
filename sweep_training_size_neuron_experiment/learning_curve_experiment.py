@@ -40,6 +40,7 @@ import config_spiking_neuron as config
 # ----------------------------- BEGIN Experiment Settings ------------------------------ #
 TRAIN_SIZES = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 14000]    # Number of circuit runs used for training
 SEEDS = [51, 52, 53, 54, 55]                                         # Repeated runs used to measure variation
+ZOOMED_PLOT_MAX_TRAIN_RUNS = 3000                                     # Upper limit for the additional zoomed learning-curve figure
 
 # Prediction tasks included in the learning-curve experiment
 TASKS = [
@@ -73,6 +74,7 @@ OUTPUT_DIR = os.path.join(ROOT, "tmp", "learning_curves")
 RAW_RESULTS = os.path.join(OUTPUT_DIR, "learning_curve_raw.csv")
 SUMMARY_RESULTS = os.path.join(OUTPUT_DIR, "learning_curve_summary.csv")
 FIGURE = os.path.join(OUTPUT_DIR, "learning_curves.png")
+ZOOMED_FIGURE = os.path.join(OUTPUT_DIR, "learning_curves_0_to_3000.png")
 CONFIG_SNAPSHOT = os.path.join(OUTPUT_DIR, "config_spiking_neuron.py")
 # ----------------------------- END Experiment Settings ------------------------------ #
 
@@ -384,7 +386,7 @@ def plot_results(results):
         axis.set_title(title)
         axis.set_xlabel("Training circuit runs")
         axis.set_ylabel(y_label)
-        axis.set_xlim(left=0)
+        axis.set_xlim(0, max(TRAIN_SIZES))
         axis.xaxis.set_major_locator(
             MaxNLocator(nbins=7, integer=True, steps=[1, 2, 5, 10])
         )
@@ -403,10 +405,17 @@ def plot_results(results):
         frameon=False,
     )
 
-    # Finish the layout and write the combined figure
+    # Write the complete learning curves across every requested training size
     figure.suptitle("LASANA Learning Curves", fontsize=16)
     figure.tight_layout(rect=(0, 0.07, 1, 0.97))
     figure.savefig(FIGURE, dpi=300, bbox_inches="tight")
+
+    # Save a second view focused on the early portion of the same learning curves
+    for axis, _, _, _, _, _ in panels:
+        axis.set_xlim(0, ZOOMED_PLOT_MAX_TRAIN_RUNS)
+
+    figure.suptitle("LASANA Learning Curves — First 3,000 Training Runs", fontsize=16)
+    figure.savefig(ZOOMED_FIGURE, dpi=300, bbox_inches="tight")
     plt.close(figure)
 
 
@@ -490,6 +499,7 @@ def run_experiment():
     print(f"Raw results: {RAW_RESULTS}", flush=True)
     print(f"Summary results: {SUMMARY_RESULTS}", flush=True)
     print(f"Figure: {FIGURE}", flush=True)
+    print(f"Zoomed figure: {ZOOMED_FIGURE}", flush=True)
     print(f"Total experiment time: {time.time() - experiment_start:.2f} seconds", flush=True)
 
 
