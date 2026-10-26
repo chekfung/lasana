@@ -90,20 +90,38 @@ if SPIKING_INPUT:
     '''
     DELAY_RATIO = 0.3                                           # Forces input to have approximately 20% leak events
     SAME_SIGN_WEIGHTS_FRACTION = 0.1                            # Fraction of runs that will have all the same signed weights / inputs (either negative or positive with 50/50 chance)
-    REFRACTORY_PERIOD = 5 * 10**(-10)                           # seconds   ; Time before another spike can occur on the same neuron 
+
+    # Select one spike-map generation path. Parameters from the other path are not used.
+    SPIKE_MAP_GENERATION_MODE = "legacy"    #"direct_count"
+
+    # Legacy spike-map generation
+    REFRACTORY_PERIOD = 5 * 10**(-10)                           # seconds   ; Time before another spike can occur on the same neuron
     RUN_TIMEOUT = 10                                            # seconds   ; If spike mapping solution not found in x seconds, throw error.
     CIRCUIT_SIM_NUM_SPIKES = ("Num_Input_Spikes", 0, 300, "c")  # Number of simulated input spikes in one simulation (minimum, maximum)
     CIRCUIT_FAN_IN_RANGE = ("Circuit_Fan_In", 4, 32, "c")       # Neuron FAN IN range (minimum, maximum)
+
+    # Direct-count spike-map generation
+    NUM_FIRINGS_RANDOM_SEED = 43
+    NUM_FIRINGS_LOW = 0
+    NUM_FIRINGS_HIGH = 32
+
+    # Similar to defining the weight distribution, define the distribution 
+    # sampling of the number of spikes per timestep
+    def sample_num_firings(rng):
+        """Sample the number of input spikes at one permitted digital timestep."""
+        return int(rng.integers(NUM_FIRINGS_LOW, NUM_FIRINGS_HIGH + 1))
+
+    # Shared output loading
     CIRCUIT_FAN_OUT_RANGE = ("Circuit_Fan_Out", 1, 1, "c")      # Neuron FAN OUT range (minimum, maximum)
 
-
+    # Spike Footprint from a representative run (default)
     PLOT_SPIKE_BOUNDS = False                                   # Plot spike footprint after running to see whether or not we correctly capture the spike
     OUTPUT_SPIKE_NAME = 'i(C)'            # This is for the footprint :)
     SPICE_FOOTPRINT_FILE = '../data/spiking_neuron_spice_files/analog_lif_neuron_footprint_run.sp'
     SPIKE_START = 21
     SPIKE_END = 55
 
-    # Block Spike
+    # Block Spike (Rather than use a spike footprint, just generate a block of current of arbitrary length)
     # Note: We denote block spike as a PWM of a set voltage where the height of the block is determined by the raw spike
     #       total charge. The total charge is matched, but implemented as a PWM spike. Changing the time step length will
     #       maintain the same charge as the original spike footprint above, meaning the height will be lower. We use this
@@ -120,6 +138,7 @@ DF_FILENAME = "spiking_neuron_dataset.csv"   # Output file to save the dataset t
 
 # Columns in output dataset
 columns = ["Run_Name", "Run_Number", "Event_Type", 'Event_Start_Index', 'Event_End_Index', 'Digital_Time_Step',"Input_Peak_Amplitude", "Input_Total_Charge", "Weight","Input_Total_Time", "Cap_Voltage_At_Input_Start", "Cap_Voltage_At_Output_End", "Energy", "Latency"]
+
 KNOB_NAMES = ["Circuit_Fan_In_I_inj", "Circuit_Fan_Out", "V_sf", "V_adap", "V_leak", "V_rtr"]
 columns += KNOB_NAMES
 

@@ -23,6 +23,7 @@ systemverilog/test/xcelium.d/
 *spike_info*
 /data/MNIST/
 /data/*run*
+/data/
 /results/
 /data/*logs*
 /data/*golden*

@@ -22,6 +22,29 @@ inject_config(args.config, globals())
 
 weight_rng = np.random.default_rng(WEIGHT_RANDOM_SEED)
 
+# Short circuit error if all configs not declared in the file correctly for spike generation
+spike_map_generation_mode = globals().get("SPIKE_MAP_GENERATION_MODE", "legacy")
+
+if spike_map_generation_mode not in ["legacy", "direct_count"]:
+    raise ValueError(f"Unknown SPIKE_MAP_GENERATION_MODE: {spike_map_generation_mode}")
+
+# Validate the selected mode before creating any run directories or files.
+if SPIKING_INPUT:
+    if spike_map_generation_mode == "legacy":
+        required_parameters = ["CIRCUIT_FAN_IN_RANGE", "CIRCUIT_SIM_NUM_SPIKES", "REFRACTORY_PERIOD", "RUN_TIMEOUT", "DELAY_RATIO"]
+    else:
+        required_parameters = ["NUM_FIRINGS_RANDOM_SEED", "DELAY_RATIO", "sample_num_firings"]
+
+    missing_parameters = [parameter for parameter in required_parameters if parameter not in globals()]
+    if missing_parameters:
+        raise ValueError(f"Missing parameters for {spike_map_generation_mode} spike-map generation: {missing_parameters}")
+
+if SPIKING_INPUT and spike_map_generation_mode == "direct_count":
+    if not DIGITAL_INPUT_ENFORCEMENT or not callable(sample_num_firings):
+        raise ValueError("direct_count spike-map generation requires digital input and callable sample_num_firings().")
+
+    num_firings_rng = np.random.default_rng(NUM_FIRINGS_RANDOM_SEED)
+
 # ======================
 '''
 This file is solely used to run SPICE simulations to characterize an analog circuit implemented in SPICE. (File 1 of creation of the dataset)
@@ -119,7 +142,11 @@ if SPIKING_INPUT:
 # Create Inputs File 
 inputs_filepath_tracking = os.path.join(run_directory, 'input_tracking.csv')
 inputs_fd = open(inputs_filepath_tracking, 'w')
-header = 'Run_Number,Input_Net_Name,Digital_Timestep,Value\n'
+# Num_Firings applies only to spike inputs; preserve the nonspiking CSV schema.
+if SPIKING_INPUT:
+    header = 'Run_Number,Input_Net_Name,Digital_Timestep,Value,Num_Firings\n'
+else:
+    header = 'Run_Number,Input_Net_Name,Digital_Timestep,Value\n'
 inputs_fd.write(header)
 
 # Setup which runs will be all negative / all positive
@@ -129,23 +156,29 @@ while (current_runs < NUMBER_OF_RUNS):
     # Go through and create PWL files for each of the inputs 
     if SPIKING_INPUT:
         for (net_name, net) in zip(INPUT_NET_NAME, INPUT_NET):
-            # Get random stuff
-            circuit_fan_in = random.randint(CIRCUIT_FAN_IN_RANGE[1], CIRCUIT_FAN_IN_RANGE[2])
-            circuit_num_input_spikes = random.randint(CIRCUIT_SIM_NUM_SPIKES[1], CIRCUIT_SIM_NUM_SPIKES[2])
-
-            randomized_values[current_runs].append((CIRCUIT_SIM_NUM_SPIKES[0]+'_'+ net_name, circuit_num_input_spikes))
-            randomized_values[current_runs].append((CIRCUIT_FAN_IN_RANGE[0]+'_'+ net_name, circuit_fan_in))
-
             # Generate input Spike Map and then add the spike footprint on top of that.
-            try:
-                if DIGITAL_INPUT_ENFORCEMENT:
-                    spike_map = generate_spike_map_digital(circuit_fan_in, circuit_num_input_spikes, REFRACTORY_PERIOD, total_sim_time_s, sampling_frequency, DIGITAL_FREQUENCY, RUN_TIMEOUT, DELAY_RATIO)
-                else:
-                    spike_map = generate_spike_map(circuit_fan_in, circuit_num_input_spikes, REFRACTORY_PERIOD, total_sim_time_s, sampling_frequency, RUN_TIMEOUT, DELAY_RATIO)
-            except Exception as e:
-                # If error in generation, then continue again
-                print("Could not generate spike map within timeout of {} seconds. Trying again".format(RUN_TIMEOUT))
-                continue
+            if spike_map_generation_mode == "legacy":
+                try:
+                    circuit_fan_in = random.randint(CIRCUIT_FAN_IN_RANGE[1], CIRCUIT_FAN_IN_RANGE[2])
+                    circuit_num_input_spikes = random.randint(CIRCUIT_SIM_NUM_SPIKES[1], CIRCUIT_SIM_NUM_SPIKES[2])
+
+                    randomized_values[current_runs].append((CIRCUIT_SIM_NUM_SPIKES[0]+'_'+ net_name, circuit_num_input_spikes))
+                    randomized_values[current_runs].append((CIRCUIT_FAN_IN_RANGE[0]+'_'+ net_name, circuit_fan_in))
+
+                    if DIGITAL_INPUT_ENFORCEMENT:
+                        spike_map = generate_spike_map_digital(circuit_fan_in, circuit_num_input_spikes, REFRACTORY_PERIOD, total_sim_time_s, sampling_frequency, DIGITAL_FREQUENCY, RUN_TIMEOUT, DELAY_RATIO)
+                    else:
+                        spike_map = generate_spike_map(circuit_fan_in, circuit_num_input_spikes, REFRACTORY_PERIOD, total_sim_time_s, sampling_frequency, RUN_TIMEOUT, DELAY_RATIO)
+                except Exception:
+                    print("Could not generate spike map within timeout of {} seconds. Trying again".format(RUN_TIMEOUT))
+                    continue
+            elif spike_map_generation_mode == "direct_count":
+                spike_map = generate_spike_map_digital_direct(total_sim_time_s, sampling_frequency, DIGITAL_FREQUENCY, DELAY_RATIO, num_firings_rng, sample_num_firings)
+                circuit_num_input_spikes = int(spike_map.sum())
+                randomized_values[current_runs].append(("Num_Input_Spikes_" + net_name, circuit_num_input_spikes))
+                randomized_values[current_runs].append(("Circuit_Fan_In_" + net_name, np.nan))
+            else:
+                raise ValueError(f"Unknown SPIKE_MAP_GENERATION_MODE: {spike_map_generation_mode}")
 
             # Applies random weight to each of the spikes in the spike map
             weight_sign = None
@@ -168,7 +201,7 @@ while (current_runs < NUMBER_OF_RUNS):
             digital_index_step = int(num_samples / num_digital_samples)
             for input_index in np.where(spike_map > 0)[0]:
                 digital_timestep = input_index // digital_index_step
-                format = f"{current_runs},{net_name},{digital_timestep},{weight_map[input_index]}\n"
+                format = f"{current_runs},{net_name},{digital_timestep},{weight_map[input_index]},{spike_map[input_index]}\n"
                 inputs_fd.write(format)
             
             if PLOT_SPIKE_BOUNDS:
@@ -449,7 +482,10 @@ with open(randomized_output_parameters_fd, 'w') as f:
 hyperparameter_fd = os.path.join(run_directory, "hyperparameters.txt")
 
 if SPIKING_INPUT:
-    randomized_params_ranges = [CIRCUIT_SIM_NUM_SPIKES, CIRCUIT_FAN_IN_RANGE, CIRCUIT_FAN_OUT_RANGE] + KNOB_PARAMS
+    if spike_map_generation_mode == "legacy":
+        randomized_params_ranges = [CIRCUIT_SIM_NUM_SPIKES, CIRCUIT_FAN_IN_RANGE, CIRCUIT_FAN_OUT_RANGE] + KNOB_PARAMS
+    else:
+        randomized_params_ranges = [CIRCUIT_FAN_OUT_RANGE] + KNOB_PARAMS
 else:
     randomized_params_ranges = KNOB_PARAMS
 
@@ -473,8 +509,12 @@ with open(hyperparameter_fd, "w") as f:
     # Spiking input hyperparameters
     if SPIKING_INPUT:
         f.write(f"NUM_INPUT_POINTS: {NUM_INPUT_POINTS}\n")
-        f.write(f"REFRACTORY_PERIOD: {REFRACTORY_PERIOD}\n")
-        f.write(f"RUN_TIMEOUT: {RUN_TIMEOUT}\n")
+        f.write(f"SPIKE_MAP_GENERATION_MODE: {spike_map_generation_mode}\n")
+        if spike_map_generation_mode == "legacy":
+            f.write(f"REFRACTORY_PERIOD: {REFRACTORY_PERIOD}\n")
+            f.write(f"RUN_TIMEOUT: {RUN_TIMEOUT}\n")
+        else:
+            f.write(f"NUM_FIRINGS_RANDOM_SEED: {NUM_FIRINGS_RANDOM_SEED}\n")
         f.write(f"SPICE_FOOTPRINT_FILE: {SPICE_FOOTPRINT_FILE}\n")
         f.write(f"FOOTPRINT_CHARGE: {footprint_charge}\n")
         f.write(f"SPIKE_START: {SPIKE_START}\n")

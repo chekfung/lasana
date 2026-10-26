@@ -176,6 +176,58 @@ def generate_spike_map_digital(num_neurons, num_spikes, refractory_period, total
 
     return spike_map
 
+def generate_spike_map_digital_direct(total_time, sampling_frequency, digital_frequency, input_delay_ratio, num_firings_rng, sample_num_firings):
+    '''
+    Generate a digital spike map by sampling the distribution for number of RNG spikes from using the 
+    'direct_count' mode of generation of spikes.
+
+    DELAY_RATIO first reserves timesteps with no input. At every other digital
+    timestep, the configuration-provided sampler returns the simultaneous input
+    count. A sampled count of zero creates an additional timestep with no input.
+    '''
+    num_samples = int(total_time * sampling_frequency)
+    num_digital_samples = int(total_time * digital_frequency)
+    digital_index_step = int(num_samples / num_digital_samples)
+
+    if digital_index_step < 1:
+        raise ValueError("Digital timestep is smaller than the analog timestep.")
+    if input_delay_ratio < 0 or input_delay_ratio > 1:
+        raise ValueError("input_delay_ratio must be between 0 and 1.")
+
+    # Determine in spike train where exactly there will be no inputs (DELAY_RATIO)
+    # Done without replacement until satisfy the number of timesteps
+    digital_timestep_delay_areas = []
+    num_delay_digital_time_periods = int(num_digital_samples * input_delay_ratio)
+
+    while len(digital_timestep_delay_areas) < num_delay_digital_time_periods:
+        timestep = random.randint(0, num_digital_samples-1)
+
+        if timestep in digital_timestep_delay_areas:
+            continue
+
+        digital_timestep_delay_areas.append(timestep)
+
+    spike_map = np.zeros(num_samples, dtype=np.int32)
+
+    # For each digital timestep, sample and determine weights
+    for digital_index in range(num_digital_samples):
+        spike_map_index = digital_index * digital_index_step
+
+        # Preserve the initial empty timestep used by the legacy digital generator.
+        if spike_map_index < 5 or digital_index in digital_timestep_delay_areas:
+            # Note: 5 here is arbitrary but was used in the past, so we didn't change it
+            # If digital index is in the delay_ratio where we have no spikes, continue
+            continue
+
+        # Sample based on the distribution (Note: sample_num_firings is defined by the user in the configuration file)
+        num_firings = sample_num_firings(num_firings_rng)
+        if isinstance(num_firings, (bool, np.bool_)) or not isinstance(num_firings, (int, np.integer)) or num_firings < 0:
+            raise ValueError("sample_num_firings() must return a nonnegative integer scalar.")
+
+        spike_map[spike_map_index] = int(num_firings)
+
+    return spike_map
+
     
 def generate_spike_map(num_neurons: int, num_spikes: int, refractory_period: int, total_time: float, sampling_frequency: int, timeout: int, input_delay_ratio: float) -> np.ndarray:
     """
