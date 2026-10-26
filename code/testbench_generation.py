@@ -61,7 +61,8 @@ assert(is_simulator_real(sim_str))
 pwl_file_template = RUN_NAME + "_" + "pwl_file_{}_{}.txt"       # First one referes to run number, second is input net connection 
 
 # File IO to create directory structure for run
-run_directory = os.path.join('../data', RUN_NAME)
+run_output_root = globals().get("RUN_OUTPUT_ROOT", "../data")
+run_directory = os.path.join(run_output_root, RUN_NAME)
 libraries_directory = os.path.join(run_directory, 'libraries')
 pwl_file_main_directory = os.path.join(run_directory, "pwl_files")
 spice_run_directory = os.path.join(run_directory, 'spice_runs')

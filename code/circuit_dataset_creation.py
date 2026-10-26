@@ -45,7 +45,8 @@ def analyze_run(i):
 # -------------------------------------
 # Read in Hyperparameters from the config files and from the previous testbench_generation runs
 
-run_directory = os.path.join('../data', RUN_NAME)
+run_output_root = globals().get("RUN_OUTPUT_ROOT", "../data")
+run_directory = os.path.join(run_output_root, RUN_NAME)
 HYPERPARAMETERS_CSV_FILE = os.path.join(run_directory, "randomized_output_log.csv")
 DATASET_CREATION_FILENAME = os.path.join(run_directory, DF_FILENAME)
 
