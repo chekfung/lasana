@@ -31,6 +31,7 @@ systemverilog/test/xcelium.d/
 /data/crossbar_mnist_acc_data.csv
 /data/crossbar_mnist_lasana_acc_data.csv
 sweep_training_size_neuron_experiment/
+lasana_input_distribution_shmoo/*output*
 
 
 # C extensions
