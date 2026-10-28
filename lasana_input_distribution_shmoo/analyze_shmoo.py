@@ -18,7 +18,7 @@ parser.add_argument("--output-dir", required=True)
 parser.add_argument("--runs-per-point", type=int, default=100)
 parser.add_argument("--timesteps-per-run", type=int, default=100)
 parser.add_argument("--high-membrane-threshold", type=float, default=0.5)
-parser.add_argument("--colormap", default="Blues")
+parser.add_argument("--colormap", default="tab10")
 arguments = parser.parse_args()
 
 output_directory = Path(arguments.output_dir).expanduser().resolve()
@@ -78,6 +78,7 @@ for point in manifest.to_dict("records"):
     input_events = events[events["Event_Type"].isin(["in-no_out", "in-out"])]
     in_out = input_events[input_events["Event_Type"] == "in-out"]
     in_no_out = input_events[input_events["Event_Type"] == "in-no_out"]
+    leak = events[events["Event_Type"] == "leak"]
 
     # A high state means that the membrane was already above the configured
     # threshold immediately before this timestep's aggregate input was applied.
@@ -101,6 +102,9 @@ for point in manifest.to_dict("records"):
         "total_input_firings": int(input_tracking["Num_Firings"].sum()),
         "in_out_events": len(in_out),
         "in_no_out_events": len(in_no_out),
+        "latency_events": len(in_out),
+        "average_latency_ns": 1e9 * in_out["Latency"].mean(),
+        "leak_events": len(leak),
         "output_spike_percent": 100 * len(in_out) / len(input_events),
         "high_membrane_in_out_events": int(high_in_out.sum()),
         "high_membrane_in_out_percent": 100 * high_in_out.mean(),
@@ -148,7 +152,7 @@ axes[0, 0].hist(
     legacy_counts,
     bins=np.arange(legacy_counts.max() + 2) - 0.5,
     density=True,
-    color=color_map(0.65),
+    color=color_map(0),
     edgecolor="white",
 )
 axes[0, 0].set_title("Legacy spike-map generator")
@@ -165,7 +169,7 @@ for axis, poisson_lambda in zip(axes[0, 1:], lambdas):
         counts,
         bins=np.arange(counts.max() + 2) - 0.5,
         density=True,
-        color=color_map(0.65),
+        color=color_map(0),
         edgecolor="white",
     )
     axis.set_title(f"Poisson λ = {poisson_lambda:g}")
@@ -198,7 +202,7 @@ for poisson_lambda in sorted(poisson_summary["poisson_lambda"].unique()):
             weights = plot_data[row["run_name"]]["weights"]
             symbol = "σ" if family == "normal" else "a"
 
-            axis.hist(weights, bins=50, density=True, color=color_map(0.65), edgecolor="none")
+            axis.hist(weights, bins=50, density=True, color=color_map(0), edgecolor="none")
             axis.set_title(f"{family.title()} {symbol}={row['weight_scale']:g}")
             axis.set_xlabel("Aggregate weight applied in one occupied timestep")
             axis.set_ylabel("Density")
@@ -246,7 +250,7 @@ for poisson_lambda in sorted(poisson_summary["poisson_lambda"].unique()):
                 bins=bins,
                 density=True,
                 alpha=0.60,
-                color=color_map(0.45),
+                color=color_map(0),
                 label=(
                     f"in-no_out: n={len(in_no_out)}, "
                     f"high={row['high_membrane_in_no_out_percent']:.1f}%"
@@ -257,7 +261,7 @@ for poisson_lambda in sorted(poisson_summary["poisson_lambda"].unique()):
                 bins=bins,
                 density=True,
                 alpha=0.60,
-                color=color_map(0.80),
+                color=color_map(1),
                 label=(
                     f"in-out: n={len(in_out)}, "
                     f"high={row['high_membrane_in_out_percent']:.1f}%"
@@ -359,6 +363,156 @@ plt.close(figure)
 
 
 # -----------------------------
+# Plot the coverage tradeoff
+
+# The useful region is the upper-right: many difficult high-membrane no-spike
+# rows and enough output-spike rows for latency training.
+# JH: Well, we make this assumption, but it is unclear how much is actually needed
+#     for us to sit well within this region.
+figure, axis = plt.subplots(figsize=(10, 7))
+lambda_colors = {
+    value: color_map(index)
+    for index, value in enumerate(lambdas)
+}
+
+for family, marker in [("normal", "o"), ("uniform", "s")]:
+    for poisson_lambda in lambdas:
+        rows = poisson_summary[
+            (poisson_summary["weight_family"] == family)
+            & (poisson_summary["poisson_lambda"] == poisson_lambda)
+        ]
+        axis.scatter(
+            rows["latency_events"],
+            rows["high_membrane_in_no_out_events"],
+            s=80,
+            marker=marker,
+            color=lambda_colors[poisson_lambda],
+            label=f"Poisson λ={poisson_lambda:g}, {family}",
+        )
+
+        symbol = "σ" if family == "normal" else "a"
+        for _, row in rows.iterrows():
+            axis.annotate(
+                f"{symbol}={row['weight_scale']:g}",
+                (row["latency_events"], row["high_membrane_in_no_out_events"]),
+                xytext=(5, 5),
+                textcoords="offset points",
+                fontsize=8,
+            )
+
+axis.scatter(
+    legacy_summary["latency_events"],
+    legacy_summary["high_membrane_in_no_out_events"],
+    s=180,
+    marker="*",
+    color="black",
+    label="Legacy uniform",
+)
+axis.set_xlabel('Number of spike events ("latency events")')
+axis.set_ylabel(
+    "High-membrane in-no_out rows "
+    f"(V_mem > {arguments.high_membrane_threshold:g} V)"
+)
+axis.set_title("Tradeoff between spike events and difficult no-spike coverage")
+axis.grid(alpha=0.25)
+axis.legend(fontsize=8)
+figure.tight_layout()
+figure.savefig(plots_directory / "coverage_tradeoff.png", dpi=200)
+plt.close(figure)
+
+
+# -----------------------------
+# Compare the normal-distribution points
+
+# Keep counts and time on separate axes so their units are not mixed.
+normal_summary = poisson_summary[poisson_summary["weight_family"] == "normal"]
+normal_scales = sorted(normal_summary["weight_scale"].unique())
+bar_width = 0.24
+x_positions = np.arange(len(normal_scales))
+
+normal_metrics = [
+    ("high_membrane_in_no_out_events", "High-membrane in-no_out rows", "Rows"),
+    ("latency_events", "Latency events", "Rows"),
+    ("average_latency_ns", "Mean latency", "Nanoseconds"),
+]
+
+figure, axes = plt.subplots(1, 3, figsize=(16, 5))
+
+for axis, (metric, title, ylabel) in zip(axes, normal_metrics):
+    for lambda_index, poisson_lambda in enumerate(lambdas):
+        rows = normal_summary[
+            normal_summary["poisson_lambda"] == poisson_lambda
+        ].set_index("weight_scale").reindex(normal_scales)
+        offset = (lambda_index - (len(lambdas) - 1) / 2) * bar_width
+
+        axis.bar(
+            x_positions + offset,
+            rows[metric],
+            width=bar_width,
+            color=lambda_colors[poisson_lambda],
+            label=f"λ={poisson_lambda:g}",
+        )
+
+    axis.axhline(
+        legacy_summary[metric],
+        color="black",
+        linestyle=":",
+        label="Legacy" if metric == normal_metrics[0][0] else None,
+    )
+    axis.set_xticks(x_positions, [f"{value:g}" for value in normal_scales])
+    axis.set_xlabel("Normal σ")
+    axis.set_ylabel(ylabel)
+    axis.set_title(title)
+    axis.grid(axis="y", alpha=0.25)
+
+axes[0].legend(fontsize=8)
+figure.suptitle("Normal-weight coverage and latency by Poisson λ and σ")
+figure.tight_layout()
+figure.savefig(plots_directory / "normal_distribution_dashboard.png", dpi=200)
+plt.close(figure)
+
+
+# -----------------------------
+# Plot the event-class composition
+
+composition = summary.copy()
+composition["total_events"] = (
+    composition["leak_events"]
+    + composition["in_no_out_events"]
+    + composition["latency_events"]
+)
+
+labels = []
+for _, row in composition.iterrows():
+    if row["input_generation"] == "legacy":
+        labels.append("Legacy U±2")
+    else:
+        family = f"Nσ{row['weight_scale']:g}" if row["weight_family"] == "normal" else f"U±{row['weight_scale']:g}"
+        labels.append(f"λ{row['poisson_lambda']:g} {family}")
+
+figure, axis = plt.subplots(figsize=(11, 9))
+left = np.zeros(len(composition))
+event_classes = [
+    ("leak_events", "Leak", color_map(0)),
+    ("in_no_out_events", "in-no_out", color_map(1)),
+    ("latency_events", "in-out / latency", color_map(2)),
+]
+
+for metric, label, color in event_classes:
+    percentages = 100 * composition[metric] / composition["total_events"]
+    axis.barh(labels, percentages, left=left, color=color, label=label)
+    left += percentages.to_numpy()
+
+axis.set_xlabel("Share of parsed event rows (%)")
+axis.set_title("Event-class composition")
+axis.legend()
+axis.invert_yaxis()
+figure.tight_layout()
+figure.savefig(plots_directory / "event_class_composition.png", dpi=200)
+plt.close(figure)
+
+
+# -----------------------------
 # Compare the original generator with matched uniform Poisson points
 
 # Hold the aggregate-uniform sampler at [-2N, 2N]. This leaves the spike-map
@@ -387,7 +541,7 @@ for axis, (metric, title) in zip(axes.flat, comparison_metrics):
     bars = axis.bar(
         comparison_labels,
         comparison[metric],
-        color=[color_map(value) for value in np.linspace(0.35, 0.80, len(comparison))],
+        color=[color_map(index) for index in range(len(comparison))],
     )
     axis.bar_label(bars, fmt="%.1f" if "percent" in metric else "%.0f")
     axis.set_title(title)
